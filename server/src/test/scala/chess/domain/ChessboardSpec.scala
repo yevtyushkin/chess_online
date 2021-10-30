@@ -1,11 +1,10 @@
 package com.chessonline
-package game.domain
+package chess.domain
 
-import game.domain.Color._
-import game.domain.CoordinateFile._
-import game.domain.CoordinateRank._
-import game.domain.PieceType._
-import game.domain.Square._
+import chess.domain.Side._
+import chess.domain.CoordinateFile._
+import chess.domain.CoordinateRank._
+import chess.domain.PieceType._
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers.contain
@@ -13,7 +12,7 @@ import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
 import scala.language.implicitConversions
 
-class ChessboardTest extends AnyFreeSpec {
+class ChessboardSpec extends AnyFreeSpec {
   "A Chessboard" - {
     "initial" - {
       val initial = Chessboard.initial
@@ -24,35 +23,35 @@ class ChessboardTest extends AnyFreeSpec {
 
       "should contain 32 squares with pieces" in {
         initial.squares.count {
-          case (_, _: SquareWithPiece) => true
-          case _                       => false
+          case (_, Square(Some(_))) => true
+          case _                    => false
         } shouldEqual 32
       }
 
       "white side should" - {
         behave like correctlyPlacedSide(
           White,
-          pawnsRank = Two,
-          specialPiecesRank = One
+          pawnsRank = `2`,
+          specialPiecesRank = `1`
         )
       }
 
       "black side should" - {
         behave like correctlyPlacedSide(
           Black,
-          pawnsRank = Seven,
-          specialPiecesRank = Eight
+          pawnsRank = `7`,
+          specialPiecesRank = `8`
         )
       }
 
       def correctlyPlacedSide(
-          color: Color,
+          side: Side,
           pawnsRank: CoordinateRank,
           specialPiecesRank: CoordinateRank
       ): Unit = {
         "pawns should" - {
           behave like correctlyPlacedPieces(
-            Piece(color, Pawn),
+            Piece(side, Pawn),
             CoordinateFile.values.map(Coordinate(_, pawnsRank))
           )
         }
@@ -64,7 +63,7 @@ class ChessboardTest extends AnyFreeSpec {
           val rookCoordinates = List(A, H).map(makeSpecialPieceCoordinate)
 
           behave like correctlyPlacedPieces(
-            Piece(color, Rook),
+            Piece(side, Rook),
             rookCoordinates
           )
         }
@@ -73,7 +72,7 @@ class ChessboardTest extends AnyFreeSpec {
           val knightCoordinates = List(B, G).map(makeSpecialPieceCoordinate)
 
           behave like correctlyPlacedPieces(
-            Piece(color, Knight),
+            Piece(side, Knight),
             knightCoordinates
           )
         }
@@ -82,21 +81,21 @@ class ChessboardTest extends AnyFreeSpec {
           val bishopCoordinates = List(C, F).map(makeSpecialPieceCoordinate)
 
           behave like correctlyPlacedPieces(
-            Piece(color, Bishop),
+            Piece(side, Bishop),
             bishopCoordinates
           )
         }
 
         "queens should" - {
           behave like correctlyPlacedPieces(
-            Piece(color, Queen),
+            Piece(side, Queen),
             List(Coordinate(D, specialPiecesRank))
           )
         }
 
         "kings should" - {
           behave like correctlyPlacedPieces(
-            Piece(color, King),
+            Piece(side, King),
             List(Coordinate(E, specialPiecesRank))
           )
         }
@@ -109,8 +108,8 @@ class ChessboardTest extends AnyFreeSpec {
         "have correct coordinates" in {
           initial.squares
             .filter {
-              case (_, SquareWithPiece(piece)) => piece == pieceUnderTest
-              case _                           => false
+              case (_, Square(Some(piece))) => piece == pieceUnderTest
+              case _                        => false
             }
             .map { case (coordinate, _) =>
               coordinate

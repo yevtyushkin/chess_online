@@ -1,11 +1,10 @@
 package com.chessonline
-package game.domain
+package chess.domain
 
-import CoordinateRank._
-import CoordinateFile._
-import PieceType._
-import Square._
-import Color._
+import chess.domain.Side._
+import chess.domain.CoordinateFile._
+import chess.domain.CoordinateRank._
+import chess.domain.PieceType._
 
 /** Represents a chessboard.
   * @param squares holds [[Square]]s associated with [[Coordinate]]s.
@@ -21,10 +20,10 @@ object Chessboard {
       file <- CoordinateFile.values
       rank <- CoordinateRank.values
 
-      piece = for {
+      pieceOption = for {
         pieceType <- rank match {
-          case Two | Seven => Some(Pawn)
-          case One | Eight =>
+          case `2` | `7` => Some(Pawn)
+          case `1` | `8` =>
             Some(file match {
               case A | H => Rook
               case B | G => Knight
@@ -35,17 +34,9 @@ object Chessboard {
           case _ => None
         }
 
-        pieceColor =
-          if (rank == One || rank == Two) White
-          else Black
-      } yield Piece(pieceColor, pieceType)
-
-      coordinate = Coordinate(file, rank)
-      square = piece match {
-        case Some(piece) => SquareWithPiece(piece)
-        case None        => EmptySquare
-      }
-    } yield (coordinate, square)
+        pieceSide = if (rank == `1` || rank == `2`) White else Black
+      } yield Piece(pieceSide, pieceType)
+    } yield (Coordinate(file, rank), Square(pieceOption))
 
     Chessboard(Map.from(squares))
   }

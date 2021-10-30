@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### 28.10.2021
 
-### Updated
+### Changed
 
 - ChessBoard.initial with more DRY tests
 
@@ -19,5 +19,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Documentation for existing classes and objects: `Chessboard`, `Color`, `Coordinate`, `CoordinateFile`
-  , `CoordinateRank`, `Piece`, `PieceType`, `Square`.
+- Documentation for existing classes and objects: `Chessboard`, `Side`, `Coordinate`, `CoordinateFile`
+  , `CoordinateRank`, `Piece`, `PieceType`, `Square`;
+- New classes `CastlingAvailability`, `CastlingType`, `GameState` with documentation and test.
+
+### Changed
+
+- `Color` -> `Side` naming;
+- `Square` structure to reuse `Option`.

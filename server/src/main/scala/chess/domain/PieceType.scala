@@ -1,5 +1,5 @@
 package com.chessonline
-package game.domain
+package chess.domain
 
 import enumeratum._
 
