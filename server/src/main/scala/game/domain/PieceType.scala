@@ -3,8 +3,10 @@ package game.domain
 
 import enumeratum._
 
+/** Represents a type of a [[Piece]] */
 sealed trait PieceType extends EnumEntry
 
+/** Contains all [[Piece]] instances. */
 object PieceType extends Enum[PieceType] {
   val values: IndexedSeq[PieceType] = findValues
 

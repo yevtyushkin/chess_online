@@ -7,9 +7,15 @@ import PieceType._
 import Square._
 import Color._
 
+/** Represents a chessboard.
+  * @param squares holds [[Square]]s associated with [[Coordinate]]s.
+  */
 final case class Chessboard(squares: Map[Coordinate, Square])
 
+/** A factory for [[Chessboard]] instances. */
 object Chessboard {
+
+  /** Constructs a [[Chessboard]] with a starting chess game position. */
   def initial: Chessboard = {
     val squares = for {
       file <- CoordinateFile.values

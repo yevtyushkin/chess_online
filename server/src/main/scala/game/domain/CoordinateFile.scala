@@ -3,8 +3,10 @@ package game.domain
 
 import enumeratum._
 
+/** Represents a file of a [[Coordinate]]. */
 sealed trait CoordinateFile extends EnumEntry
 
+/** Contains all [[CoordinateFile]] instances. */
 object CoordinateFile extends Enum[CoordinateFile] {
   val values: IndexedSeq[CoordinateFile] = findValues
 
