@@ -1,0 +1,39 @@
+name: Client Actions
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - client/**
+
+jobs:
+  client_build:
+    name: Client Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: subosito/flutter-action@v1
+        with:
+          flutter-version: '2.5.3'
+          channel: master
+
+      - name: Dependencies
+        run: flutter pub get
+        working-directory: client/
+
+      - name: Analyze Code
+        run: flutter analyze
+        working-directory: client/
+
+      - name: Tests
+        run: flutter test
+        working-directory: client/
+
+      - name: Build
+        run: flutter build web --release --web-renderer auto
+        working-directory: client/
+
+      - name: Deploy
+        run: echo 'TODO'
+        working-directory: client/
