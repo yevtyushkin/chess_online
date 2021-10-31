@@ -9,7 +9,9 @@ import chess.domain.PieceType._
 /** Represents a chessboard.
   * @param squares holds [[Square]]s associated with [[Coordinate]]s.
   */
-final case class Chessboard(squares: Map[Coordinate, Square])
+final case class Chessboard(squares: Map[Coordinate, Square]) {
+//  def apply(c: Coordinate) TODO
+}
 
 /** A factory for [[Chessboard]] instances. */
 object Chessboard {

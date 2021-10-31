@@ -13,7 +13,7 @@ import chess.domain.Side.White
 final case class GameState(
     movesNow: Side,
     board: Chessboard,
-    castlingsAvailable: List[CastlingAvailability],
+    castlingsAvailable: List[Castling],
     enPassantSquareOption: Option[Square]
 )
 
@@ -24,7 +24,7 @@ object GameState {
   def initial: GameState = GameState(
     movesNow = White,
     board = Chessboard.initial,
-    castlingsAvailable = CastlingAvailability.all,
+    castlingsAvailable = Castling.values.toList,
     enPassantSquareOption = None
   )
 }

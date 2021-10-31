@@ -27,3 +27,19 @@ All notable changes to this project will be documented in this file.
 
 - `Color` -> `Side` naming;
 - `Square` structure to reuse `Option`.
+
+### 31.10.2021
+
+### Added
+
+- `Move`, `MoveValidator`, `MoveValidationError`;
+- Started working on tests for `MoveValidator`.
+
+### Changed
+
+- (`CastlingType` + `CastlingAvailability`) => `Castling` enum.
+
+### TODO
+
+- Change `Chessboard` API with `apply` method, so it always returns a `Square` (an empty `Square` by default), instead
+  of an `Option[Square]`.
