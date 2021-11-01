@@ -13,7 +13,23 @@ import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import scala.language.implicitConversions
 
 class ChessboardSpec extends AnyFreeSpec {
-  "A Chessboard" - {
+  "Chessboard" - {
+    "apply" - {
+      val a1 = Coordinate(A, `1`)
+      val piece = TestUtils.createPiece()
+      val chessboard = Chessboard(Map(a1 -> Square(Some(piece))))
+
+      "returns a piece option of the square located at the given coordinate" in {
+        chessboard(a1) shouldEqual Some(piece)
+      }
+
+      "returns none if there is no square located at the given coordinate" in {
+        val b1 = Coordinate(B, `1`)
+
+        chessboard(b1) shouldEqual None
+      }
+    }
+
     "initial" - {
       val initial = Chessboard.initial
 

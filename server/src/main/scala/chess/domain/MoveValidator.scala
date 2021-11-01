@@ -25,10 +25,7 @@ object MoveValidator {
     /** Validates the given [[Move.piece]] is present at [[Move.from]]. */
     def validatePieceIsPresentAtStartingCoordinate: ErrorOrMove =
       errorOrMoveFromTest(
-        test = gameState.board.squares.get(move.from) match {
-          case Some(square) => square.pieceOption.contains(move.piece)
-          case _            => false
-        },
+        test = gameState.board(move.from).contains(move.piece),
         left = AbsentOrWrongPieceAtStartingCoordinate
       )
 
@@ -49,9 +46,9 @@ object MoveValidator {
     /** Validates that [[Move.to]] is not already taken by an allied [[Piece]]. */
     def validateDestinationNotTakenByAllyPiece: ErrorOrMove =
       errorOrMoveFromTest(
-        test = gameState.board.squares.get(move.to) match {
-          case Some(Square(Some(piece))) => piece.side != gameState.movesNow
-          case _                         => false
+        test = gameState.board(move.to) match {
+          case Some(piece) => piece.side != gameState.movesNow
+          case _           => false
         },
         SquareTakenByAllyPiece
       )

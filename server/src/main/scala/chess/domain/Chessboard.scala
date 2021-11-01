@@ -10,7 +10,10 @@ import chess.domain.PieceType._
   * @param squares holds [[Square]]s associated with [[Coordinate]]s.
   */
 final case class Chessboard(squares: Map[Coordinate, Square]) {
-//  def apply(c: Coordinate) TODO
+
+  /** Returns a [[Square.pieceOption]] located at the given [[Coordinate]]. */
+  def apply(c: Coordinate): Option[Piece] =
+    squares.getOrElse(c, Square(None)).pieceOption
 }
 
 /** A factory for [[Chessboard]] instances. */
