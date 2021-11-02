@@ -13,9 +13,10 @@ import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import scala.language.implicitConversions
 
 class ChessboardSpec extends AnyFreeSpec {
+  import TestData._
+
   "Chessboard" - {
     "apply" - {
-      val a1 = Coordinate(A, `1`)
       val piece = TestUtils.createPiece()
       val chessboard = Chessboard(Map(a1 -> Square(Some(piece))))
 
@@ -24,8 +25,6 @@ class ChessboardSpec extends AnyFreeSpec {
       }
 
       "returns none if there is no square located at the given coordinate" in {
-        val b1 = Coordinate(B, `1`)
-
         chessboard(b1) shouldEqual None
       }
     }

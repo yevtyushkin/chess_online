@@ -39,7 +39,15 @@ All notable changes to this project will be documented in this file.
 
 - (`CastlingType` + `CastlingAvailability`) => `Castling` enum.
 
-### TODO
+### 01.11.2021
 
-- Change `Chessboard` API with `apply` method, so it always returns a `Square` (an empty `Square` by default), instead
-  of an `Option[Square]`.
+### Added
+
+- `Chessboard.apply` that makes the API a bit prettier and convenient-to-use;
+
+### 02.11.2021
+
+### Added
+
+- Pawn move pattern validation with tests;
+- A bunch of test data for testing.

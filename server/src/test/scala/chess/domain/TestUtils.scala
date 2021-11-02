@@ -16,7 +16,7 @@ object TestUtils {
       movesNow: Side = White,
       board: Chessboard = Chessboard(Map.empty),
       castlingsAvailable: List[Castling] = Nil,
-      enPassantSquareOption: Option[Square] = None
+      enPassantSquareOption: Option[Coordinate] = None
   ): GameState =
     GameState(movesNow, board, castlingsAvailable, enPassantSquareOption)
 

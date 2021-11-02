@@ -22,4 +22,7 @@ object MoveValidationError extends Enum[MoveValidationError] {
 
   /** When the [[Move.to]] is already taken by the same sided [[Piece]]. */
   case object SquareTakenByAllyPiece extends MoveValidationError
+
+  /** When the [[Move.from]], [[Move.to]] and [[Move.piece]] form up the invalid chess move pattern. */
+  case object InvalidMovePattern extends MoveValidationError
 }

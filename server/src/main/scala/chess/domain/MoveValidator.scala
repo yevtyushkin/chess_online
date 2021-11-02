@@ -2,16 +2,28 @@ package com.chessonline
 package chess.domain
 
 import chess.domain.MoveValidationError._
+import chess.domain.PieceType._
 
 /** Responsible for validating [[Move]]s. */
-object MoveValidator {
+trait MoveValidator {
+
+  /** Validates the given move using the provided [[Move]] and [[GameState]].
+    * @param move the [[Move]] to validate.
+    * @param gameState the current [[GameState]].
+    * @return [[MoveValidationError]] if the [[Move]] is not valid, or the valid [[Move]] otherwise.
+    */
+  def validate(
+      move: Move,
+      gameState: GameState
+  ): Either[MoveValidationError, Move]
+}
+
+/** The default [[MoveValidator]] implementation. */
+object MoveValidator extends MoveValidator {
 
   type ErrorOrMove = Either[MoveValidationError, Move]
 
-  /** Validates the given move using the provided game state.
-    * @return either a [[MoveValidationError]] in the left channel, or the given [[Move]] in the right channel.
-    */
-  def validate(
+  override def validate(
       move: Move,
       gameState: GameState
   ): Either[MoveValidationError, Move] = {
@@ -40,7 +52,7 @@ object MoveValidator {
     def validateMoveOrder: ErrorOrMove =
       errorOrMoveFromTest(
         test = move.piece.side == gameState.movesNow,
-        MoveNotInOrder
+        left = MoveNotInOrder
       )
 
     /** Validates that [[Move.to]] is not already taken by an allied [[Piece]]. */
@@ -50,8 +62,22 @@ object MoveValidator {
           case Some(piece) => piece.side != gameState.movesNow
           case _           => false
         },
-        SquareTakenByAllyPiece
+        left = SquareTakenByAllyPiece
       )
+
+    /** Validates the given [[Move.from]], [[Move.to]] and [[Move.piece]] form a correct chess move pattern. */
+    def validateMovePattern: ErrorOrMove = ???
+
+    /** Validates the given [[Move]] pattern is available, e.g., castling is available. */
+    def validateSpecialMoveAvailability: ErrorOrMove = ???
+
+    /** Validates the given [[Move]] does not leave or put the ally [[King]] under check. */
+    def validateKingIsNotInDanger: ErrorOrMove = ???
+
+    // wrong move pattern
+    // pattern is correct but the path is blocked (rook, bishop, queen) // merge with ^?
+    // castling or pawn double-forward move is available
+    // move leaves/makes the king under check
 
     for {
       _ <- validatePieceIsPresentAtStartingCoordinate

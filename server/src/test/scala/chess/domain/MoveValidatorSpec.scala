@@ -1,10 +1,7 @@
 package com.chessonline
 package chess.domain
 
-import chess.domain.CoordinateFile._
-import chess.domain.CoordinateRank._
 import chess.domain.MoveValidationError._
-import chess.domain.PieceType._
 import chess.domain.Side._
 
 import org.scalatest.EitherValues
@@ -12,18 +9,11 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
 class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
+  import TestData._
 
   "MoveValidator" - {
     "validate" - {
-      val whitePawn = TestUtils.createPiece(White, Pawn)
-      val blackPawn = TestUtils.createPiece(Black, Pawn)
-
       val squareWithWhitePawn = TestUtils.createSquare(Some(whitePawn))
-      val squareWithBlackPawn = TestUtils.createSquare(Some(blackPawn))
-
-      val a2 = TestUtils.createCoordinate(A, `2`)
-      val a3 = TestUtils.createCoordinate(A, `3`)
-      val b2 = TestUtils.createCoordinate(B, `2`)
 
       val whitePawnAtA2 = TestUtils.createGameState(
         board = Chessboard(Map(a2 -> squareWithWhitePawn))
