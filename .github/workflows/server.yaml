@@ -18,5 +18,10 @@ jobs:
           java-version: 1.11
 
       - name: Tests
-        run: sbt test
+        run: sbt clean coverage test
         working-directory: server/
+
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: server/target/scala-2.13/scoverage-report/scoverage.xml
