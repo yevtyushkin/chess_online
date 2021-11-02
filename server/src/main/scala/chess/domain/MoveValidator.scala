@@ -78,6 +78,7 @@ object MoveValidator extends MoveValidator {
     // pattern is correct but the path is blocked (rook, bishop, queen) // merge with ^?
     // castling or pawn double-forward move is available
     // move leaves/makes the king under check
+    //
 
     for {
       _ <- validatePieceIsPresentAtStartingCoordinate

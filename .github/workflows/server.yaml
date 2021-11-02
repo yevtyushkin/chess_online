@@ -18,7 +18,7 @@ jobs:
           java-version: 1.11
 
       - name: Tests
-        run: sbt clean coverage test
+        run: sbt clean coverage test coverageReport
         working-directory: server/
 
       - uses: codecov/codecov-action@v2
