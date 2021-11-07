@@ -16,7 +16,7 @@ class GameStateSpec extends AnyFreeSpec {
       }
 
       "has all available castlings" in {
-        initial.castlingsAvailable shouldEqual Castling.values.toList
+        initial.castlingsAvailable shouldEqual CastlingType.values.toList
       }
 
       "has the white side to move now" in {

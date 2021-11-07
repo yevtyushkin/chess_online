@@ -15,7 +15,7 @@ object TestUtils {
   def createGameState(
       movesNow: Side = White,
       board: Chessboard = Chessboard(Map.empty),
-      castlingsAvailable: List[Castling] = Nil,
+      castlingsAvailable: List[CastlingType] = Nil,
       enPassantSquareOption: Option[Coordinate] = None
   ): GameState =
     GameState(movesNow, board, castlingsAvailable, enPassantSquareOption)

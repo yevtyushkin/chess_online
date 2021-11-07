@@ -51,3 +51,12 @@ All notable changes to this project will be documented in this file.
 
 - Pawn move pattern validation with tests;
 - A bunch of test data for testing.
+
+### 07.11.2021
+
+### Added
+- `MovePattern`.
+
+### Changed
+
+- `MovePatternValidator` API.

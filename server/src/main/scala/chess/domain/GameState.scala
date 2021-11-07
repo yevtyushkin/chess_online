@@ -7,13 +7,13 @@ import chess.domain.Side.White
   *
   * @param movesNow a [[Side]] which moves now.
   * @param board the current [[Chessboard]] state.
-  * @param castlingsAvailable a [[List]] with all available castlings for both [[Side]]s.
+  * @param castlingsAvailable a [[List]] with all available [[CastlingType]]s for both [[Side]]s.
   * @param enPassantSquareOption an absence or a presence of a coordinate with an en passant [[Square]].
   */
 final case class GameState(
     movesNow: Side,
     board: Chessboard,
-    castlingsAvailable: List[Castling],
+    castlingsAvailable: List[CastlingType],
     enPassantSquareOption: Option[Coordinate]
 )
 
@@ -24,7 +24,7 @@ object GameState {
   def initial: GameState = GameState(
     movesNow = White,
     board = Chessboard.initial,
-    castlingsAvailable = Castling.values.toList,
+    castlingsAvailable = CastlingType.values.toList,
     enPassantSquareOption = None
   )
 }

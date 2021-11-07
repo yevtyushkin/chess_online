@@ -1,6 +1,7 @@
 package com.chessonline
 package chess.domain
 
+import chess.domain.MovePattern._
 import chess.domain.MoveValidationError.InvalidMovePattern
 
 import org.scalatest.EitherValues
@@ -21,74 +22,104 @@ class MovePatternValidatorSpec extends AnyFreeSpec with EitherValues {
           Move(blackPawn, from = e5, to = f4)
         )
 
+        val enPassantAttacksTestData: List[(Move, Coordinate)] =
+          attacksTestData.zip(
+            List(
+              d4,
+              f4,
+              d5,
+              f5
+            )
+          )
+
         "allows" - {
-          "making a 1 square forward move to a free square" in {
+          "moves 1 square forward to an empty square" in {
             val whiteMove = Move(whitePawn, from = e2, to = e3)
             val blackMove = Move(blackPawn, from = e7, to = e6)
 
-            validate(whiteMove, emptyGameState).value shouldEqual whiteMove
-            validate(blackMove, emptyGameState).value shouldEqual blackMove
+            validate(whiteMove, emptyGameState).value shouldEqual Transition
+            validate(blackMove, emptyGameState).value shouldEqual Transition
           }
 
-          "making a 2 square forward move to a free square from the starting coordinate" in {
+          "moves 2 squares forward move to an empty square from the starting coordinate if there are no barriers" in {
             val whiteMove = Move(whitePawn, from = e2, to = e4)
             val blackMove = Move(blackPawn, from = e7, to = e5)
 
-            validate(whiteMove, emptyGameState).value shouldEqual whiteMove
-            validate(blackMove, emptyGameState).value shouldEqual blackMove
+            validate(whiteMove, emptyGameState).value shouldEqual Transition
+            validate(blackMove, emptyGameState).value shouldEqual Transition
           }
 
-          "making a regular attack" in {
-            val attackingMoves: List[(Move, Chessboard)] =
-              attacksTestData.map { case move @ Move(piece, _, to) =>
-                (
-                  move,
-                  Chessboard(
-                    Map(
-                      to -> Square(Some(piece.copy(side = piece.side.opposite)))
-                    )
-                  )
+          "regular attacks" in {
+            val attacksGameState = emptyGameState.copy(
+              board = Chessboard(
+                Map(
+                  d5 -> blackPawnSquare,
+                  f5 -> blackPawnSquare,
+                  d4 -> whitePawnSquare,
+                  f4 -> whitePawnSquare
                 )
-              }
+              )
+            )
 
-            attackingMoves foreach { case (move, board) =>
-              validate(
-                move,
-                emptyGameState.copy(board = board)
-              ).value shouldEqual move
+            attacksTestData foreach { move =>
+              validate(move, attacksGameState).value shouldEqual Attack(move.to)
             }
           }
 
-          // here we use unreal en passant coordinates, but for this level we consider this valid
-          "making en passant attack" in {
-            attacksTestData.foreach { case move @ Move(_, _, to) =>
-              validate(
-                move,
-                gameState = emptyGameState.copy(
-                  enPassantSquareOption = Some(to)
-                )
-              ).value shouldEqual move
+          // uses impossible en passant coordinates for testing purposes
+          "en passant attacks" in {
+            enPassantAttacksTestData.foreach {
+              case (move @ Move(_, _, to), expectedAttackedPieceCoordinate) =>
+                validate(
+                  move,
+                  gameState = emptyGameState.copy(
+                    enPassantSquareOption = Some(to)
+                  )
+                ).value shouldEqual Attack(expectedAttackedPieceCoordinate)
             }
           }
         }
 
         "denies moves" - {
-          "to non-empty square" in {
+          "forward to non-empty square" in {
             val whiteMove = Move(whitePawn, from = e2, to = e3)
             val blackMove = Move(blackPawn, from = e7, to = e5)
 
+            val gameStateWithNonEmptySquares = emptyGameState.copy(
+              board = Chessboard(
+                Map(e3 -> blackPawnSquare, e5 -> blackPawnSquare)
+              )
+            )
+
             validate(
               whiteMove,
-              emptyGameState.copy(board =
-                Chessboard(Map(e3 -> blackPawnSquare))
-              )
+              gameStateWithNonEmptySquares
             ).left.value shouldEqual InvalidMovePattern
 
             validate(
               blackMove,
-              emptyGameState.copy(board =
-                Chessboard(Map(e5 -> blackPawnSquare))
+              gameStateWithNonEmptySquares
+            ).left.value shouldEqual InvalidMovePattern
+          }
+
+          "moves 2 squares forward with barriers" in {
+            val whiteMove = Move(whitePawn, from = e2, to = e4)
+            val blackMove = Move(blackPawn, from = e7, to = e5)
+
+            val gameStateWithBarriers = emptyGameState.copy(
+              board = Chessboard(
+                Map(e3 -> whitePawnSquare, e6 -> blackPawnSquare)
               )
+            )
+
+            validate(
+              whiteMove,
+              gameStateWithBarriers
+            ).left.value shouldEqual InvalidMovePattern
+
+            validate(
+              blackMove,
+              gameStateWithBarriers
             ).left.value shouldEqual InvalidMovePattern
           }
 
@@ -107,26 +138,32 @@ class MovePatternValidatorSpec extends AnyFreeSpec with EitherValues {
             ).left.value shouldEqual InvalidMovePattern
           }
 
-          "attacking empty squares" in {
-            attacksTestData.foreach(move =>
+          "empty square attacks" in {
+            attacksTestData.foreach { move =>
               validate(
                 move,
                 emptyGameState
               ).left.value shouldEqual InvalidMovePattern
-            )
+            }
           }
 
-          "attacking ally pieces" in {
-            attacksTestData.foreach { case move @ Move(piece, _, to) =>
-              MovePatternValidator
-                .validate(
-                  move,
-                  gameState = emptyGameState.copy(board =
-                    Chessboard(Map(to -> Square(Some(piece))))
-                  )
+          "ally piece attacks" in {
+            val attackingAlliedPiecesGameState = emptyGameState.copy(
+              board = Chessboard(
+                Map(
+                  d5 -> whitePawnSquare,
+                  f5 -> whitePawnSquare,
+                  d4 -> blackPawnSquare,
+                  f4 -> blackPawnSquare
                 )
-                .left
-                .value shouldEqual InvalidMovePattern
+              )
+            )
+
+            attacksTestData.foreach { move =>
+              validate(
+                move,
+                attackingAlliedPiecesGameState
+              ).left.value shouldEqual InvalidMovePattern
             }
           }
         }

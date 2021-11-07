@@ -11,5 +11,6 @@ val scalatestVersion = "3.2.10"
 
 libraryDependencies ++= Seq(
   "com.beachape" %% "enumeratum" % enumeratumVersion,
+  "org.typelevel" %% "cats-core" % "2.6.1",
   "org.scalatest" %% "scalatest" % "3.2.10" % "test"
 )
