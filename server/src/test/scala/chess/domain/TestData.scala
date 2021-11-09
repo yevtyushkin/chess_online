@@ -27,10 +27,9 @@ object TestData {
   val blackPawnSquare: Square = Square(Some(blackPawn))
 
   val whiteKing: Piece = Piece(White, King)
-  val whiteKingSquare: Square = Square(Some(whiteKing))
-
   val blackKing: Piece = Piece(Black, King)
-  val blackKingSquare: Square = Square(Some(blackKing))
+
+  val whiteQueen: Piece = Piece(White, Queen)
 
   val emptyGameState: GameState = TestUtils.createGameState()
 }

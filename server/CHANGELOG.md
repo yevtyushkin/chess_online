@@ -6,8 +6,8 @@ All notable changes to this project will be documented in this file.
 
 #### Added
 
-- Base models: `Chessboard`, `Color`, `Coordinate`, `CoordinateFile`, `CoordinateRank`, `Piece`, `PieceType`, `Square`.
-- Tests for `Chessboard.initial`
+- Base models: `Chessboard`, `Color`, `Coordinate`, `CoordinateFile`, `CoordinateRank`, `Piece`, `PieceType`, `Square`;
+- Tests for `Chessboard.initial`.
 
 ### 28.10.2021
 
@@ -66,5 +66,6 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- King's `MovePattern` validation with tests.
+- King's `MovePattern` validation with tests;
+- Queen's `MovePattern` validation with tests;
 - Some useful methods for the domain API.

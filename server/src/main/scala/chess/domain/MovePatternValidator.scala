@@ -26,33 +26,31 @@ object MovePatternValidator extends MovePatternValidator {
       move: Move,
       gameState: GameState
   ): MovePatternOrError = {
-    def side: Side = move.piece.side
-
-    def destinationIsEmpty: Boolean = gameState.board.pieceAt(move.to).isEmpty
-
     def noPiecesBetween(
         from: Coordinate = move.from,
         to: Coordinate = move.to
     ): Boolean =
       Coordinate.allBetween(from, to).forall(gameState.board.pieceAt(_).isEmpty)
 
+    lazy val side = move.piece.side
+    lazy val destinationIsEmpty = gameState.board.pieceAt(move.to).isEmpty
+    lazy val (fileDelta, rankDelta) = move.as2DVector
+    lazy val absFileDelta = fileDelta.abs
+    lazy val absRankDelta = rankDelta.abs
+
     def validateForPawn: MovePatternOrError = {
       lazy val isFirstMove = List(`2`, `7`).contains(move.from.rank)
       lazy val isEnPassantAttack =
         gameState.enPassantSquareOption.contains(move.to)
 
-      val moveAsVector = move.as2DVector
-
       // We care only about forward moves which patterns are (_, 1) | (0, 2).
       // Move 2 squares forward for white and for black would have the following patterns respectively: (0, 2) and (0, -2).
       // Since we care only about the pattern, we transform the rank delta taking into account which side performed the move.
-      val moveAsVectorFromSidePerspective = moveAsVector match {
-        case (fileDelta, rankDelta) =>
-          val newRankDelta = if (side == White) rankDelta else -rankDelta
-          (fileDelta, newRankDelta)
-      }
+      val rankDeltaFromSidePerspective =
+        if (side == White) rankDelta
+        else -rankDelta
 
-      moveAsVectorFromSidePerspective match {
+      (fileDelta, rankDeltaFromSidePerspective) match {
         case (0, 1) if destinationIsEmpty => Transition.asRight
         case (0, 2) if isFirstMove && destinationIsEmpty && noPiecesBetween() =>
           Transition.asRight
@@ -69,8 +67,6 @@ object MovePatternValidator extends MovePatternValidator {
     }
 
     def validateForKing: Either[MoveValidationError, MovePattern] = {
-      val (fileDelta, rankDelta) = move.as2DVector
-
       lazy val castlingType: Option[CastlingType] = {
         val castlingType = (fileDelta, rankDelta) match {
           case (2, 0)  => Some(KingSide)
@@ -95,7 +91,7 @@ object MovePatternValidator extends MovePatternValidator {
         } yield castlingType
       }
 
-      (fileDelta.abs, rankDelta.abs) match {
+      (absFileDelta, absRankDelta) match {
         case (1, 0) | (0, 1) | (1, 1) =>
           if (destinationIsEmpty) Transition.asRight
           else Attack(move.to).asRight
@@ -108,10 +104,22 @@ object MovePatternValidator extends MovePatternValidator {
       }
     }
 
+    def validateForQueen: Either[MoveValidationError, MovePattern] = {
+      def transitionOrAttack: Either[MoveValidationError, MovePattern] =
+        if (destinationIsEmpty) Transition.asRight
+        else Attack(move.to).asRight
+
+      (fileDelta, rankDelta) match {
+        case (_, 0) | (0, _)          => transitionOrAttack
+        case (x, y) if x.abs == y.abs => transitionOrAttack
+        case _                        => InvalidMovePattern.asLeft
+      }
+    }
+
     move.piece.pieceType match {
       case Pawn   => validateForPawn
       case King   => validateForKing
-      case Queen  => ???
+      case Queen  => validateForQueen
       case Rook   => ???
       case Bishop => ???
       case Knight => ???
