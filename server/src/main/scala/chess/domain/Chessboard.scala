@@ -6,20 +6,12 @@ import chess.domain.CoordinateFile._
 import chess.domain.CoordinateRank._
 import chess.domain.PieceType._
 
-/** Represents a chessboard.
-  * @param squares holds [[Square]]s associated with [[Coordinate]]s.
-  */
 final case class Chessboard(squares: Map[Coordinate, Square]) {
-
-  /** Returns a [[Square.pieceOption]] located at the given [[Coordinate]]. */
-  def apply(c: Coordinate): Option[Piece] =
+  def pieceAt(c: Coordinate): Option[Piece] =
     squares.getOrElse(c, Square(None)).pieceOption
 }
 
-/** A factory for [[Chessboard]] instances. */
 object Chessboard {
-
-  /** Constructs a [[Chessboard]] with a starting chess game position. */
   def initial: Chessboard = {
     val squares = for {
       file <- CoordinateFile.values

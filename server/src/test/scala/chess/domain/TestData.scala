@@ -6,7 +6,6 @@ import chess.domain.CoordinateFile._
 import chess.domain.PieceType._
 import chess.domain.Side._
 
-/** Holds common test data for tests. */
 object TestData {
   private def makeChessRow(file: CoordinateFile): Seq[Coordinate] = for {
     rank <- CoordinateRank.values
@@ -26,6 +25,12 @@ object TestData {
 
   val blackPawn: Piece = Piece(Black, Pawn)
   val blackPawnSquare: Square = Square(Some(blackPawn))
+
+  val whiteKing: Piece = Piece(White, King)
+  val whiteKingSquare: Square = Square(Some(whiteKing))
+
+  val blackKing: Piece = Piece(Black, King)
+  val blackKingSquare: Square = Square(Some(blackKing))
 
   val emptyGameState: GameState = TestUtils.createGameState()
 }

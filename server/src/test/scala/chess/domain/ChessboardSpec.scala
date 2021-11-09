@@ -16,16 +16,16 @@ class ChessboardSpec extends AnyFreeSpec {
   import TestData._
 
   "Chessboard" - {
-    "apply" - {
+    "pieceAt" - {
       val piece = TestUtils.createPiece()
       val chessboard = Chessboard(Map(a1 -> Square(Some(piece))))
 
-      "returns a piece option of the square located at the given coordinate" in {
-        chessboard(a1) shouldEqual Some(piece)
+      "should return a piece option of the square located at the given coordinate" in {
+        chessboard.pieceAt(a1) shouldEqual Some(piece)
       }
 
-      "returns none if there is no square located at the given coordinate" in {
-        chessboard(b1) shouldEqual None
+      "should return none if there is no square with such coordinate in the map" in {
+        chessboard.pieceAt(b1) shouldEqual None
       }
     }
 

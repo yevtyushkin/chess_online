@@ -1,30 +1,30 @@
 package com.chessonline
 package chess.domain
 
-import chess.domain.Side.White
+import chess.domain.Side._
 
-/** Represents a chess game state.
-  *
-  * @param movesNow a [[Side]] which moves now.
-  * @param board the current [[Chessboard]] state.
-  * @param castlingsAvailable a [[List]] with all available [[CastlingType]]s for both [[Side]]s.
-  * @param enPassantSquareOption an absence or a presence of a coordinate with an en passant [[Square]].
-  */
 final case class GameState(
     movesNow: Side,
     board: Chessboard,
-    castlingsAvailable: List[CastlingType],
+    castlingsForWhite: List[CastlingType],
+    castlingsForBlack: List[CastlingType],
     enPassantSquareOption: Option[Coordinate]
-)
+) {
+  def castingAvailable(forSide: Side, castlingType: CastlingType): Boolean = {
+    val selectFrom =
+      if (forSide == White) castlingsForWhite
+      else castlingsForBlack
 
-/** A factory for [[GameState]] instances. */
+    selectFrom.contains(castlingType)
+  }
+}
+
 object GameState {
-
-  /** Constructs a [[GameState]] representing a start of the chess game. */
   def initial: GameState = GameState(
     movesNow = White,
     board = Chessboard.initial,
-    castlingsAvailable = CastlingType.values.toList,
+    castlingsForWhite = CastlingType.values.toList,
+    castlingsForBlack = CastlingType.values.toList,
     enPassantSquareOption = None
   )
 }

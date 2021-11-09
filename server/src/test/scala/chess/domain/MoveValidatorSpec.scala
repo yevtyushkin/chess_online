@@ -13,12 +13,9 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
 
   "MoveValidator" - {
     "validate" - {
-      val squareWithWhitePawn = TestUtils.createSquare(Some(whitePawn))
-
       val whitePawnAtA2 = TestUtils.createGameState(
-        board = Chessboard(Map(a2 -> squareWithWhitePawn))
+        board = Chessboard(Map(a2 -> whitePawnSquare))
       )
-      val emptyState = TestUtils.createGameState()
 
       import MoveValidator._
 
@@ -26,7 +23,7 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
         "when there is no piece at the starting coordinate" in {
           validate(
             move = Move(whitePawn, a2, a3),
-            gameState = emptyState
+            gameState = emptyGameState
           ).left.value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
         }
 
@@ -63,7 +60,7 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           validate(
             move = Move(whitePawn, a2, a3),
             gameState = whitePawnAtA3
-          ).left.value shouldEqual SquareTakenByAllyPiece
+          ).left.value shouldEqual DestinationSquareTakenByAllyPiece
         }
       }
     }

@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- ChessBoard.initial with more DRY tests
+- ChessBoard.initial with more DRY tests.
 
 ### 30.10.2021
 
@@ -55,8 +55,16 @@ All notable changes to this project will be documented in this file.
 ### 07.11.2021
 
 ### Added
+
 - `MovePattern`.
 
 ### Changed
 
 - `MovePatternValidator` API.
+
+### 09.11.2021
+
+### Added
+
+- King's `MovePattern` validation with tests.
+- Some useful methods for the domain API.
