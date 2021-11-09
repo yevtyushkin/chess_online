@@ -34,6 +34,9 @@ object MovePatternValidator extends MovePatternValidator {
 
     lazy val side = move.piece.side
     lazy val destinationIsEmpty = gameState.board.pieceAt(move.to).isEmpty
+    lazy val transitionOrAttack =
+      if (destinationIsEmpty) Transition.asRight
+      else Attack(move.to).asRight
     lazy val (fileDelta, rankDelta) = move.as2DVector
     lazy val absFileDelta = fileDelta.abs
     lazy val absRankDelta = rankDelta.abs
@@ -93,8 +96,7 @@ object MovePatternValidator extends MovePatternValidator {
 
       (absFileDelta, absRankDelta) match {
         case (1, 0) | (0, 1) | (1, 1) =>
-          if (destinationIsEmpty) Transition.asRight
-          else Attack(move.to).asRight
+          transitionOrAttack
 
         case _ =>
           (for {
@@ -104,25 +106,34 @@ object MovePatternValidator extends MovePatternValidator {
       }
     }
 
-    def validateForQueen: Either[MoveValidationError, MovePattern] = {
-      def transitionOrAttack: Either[MoveValidationError, MovePattern] =
-        if (destinationIsEmpty) Transition.asRight
-        else Attack(move.to).asRight
-
+    def validateForRook: Either[MoveValidationError, MovePattern] =
       (fileDelta, rankDelta) match {
-        case (_, 0) | (0, _)          => transitionOrAttack
-        case (x, y) if x.abs == y.abs => transitionOrAttack
-        case _                        => InvalidMovePattern.asLeft
+        case (_, 0) | (0, _) if noPiecesBetween() => transitionOrAttack
+        case _                                    => InvalidMovePattern.asLeft
       }
+
+    def validateForBishop: Either[MoveValidationError, MovePattern] = {
+      if (absFileDelta == absRankDelta && noPiecesBetween()) transitionOrAttack
+      else InvalidMovePattern.asLeft
     }
+
+    def validateForQueen: Either[MoveValidationError, MovePattern] =
+      // Since available moves(AM) for Queen == AM(Rook) + AM(Bishop)
+      validateForRook.orElse(validateForBishop)
+
+    def validateForKnight: Either[MoveValidationError, MovePattern] =
+      (absFileDelta, absRankDelta) match {
+        case (2, 1) | (1, 2) => transitionOrAttack
+        case _               => InvalidMovePattern.asLeft
+      }
 
     move.piece.pieceType match {
       case Pawn   => validateForPawn
       case King   => validateForKing
+      case Rook   => validateForRook
+      case Bishop => validateForBishop
       case Queen  => validateForQueen
-      case Rook   => ???
-      case Bishop => ???
-      case Knight => ???
+      case Knight => validateForKnight
     }
   }
 }

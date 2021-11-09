@@ -68,4 +68,7 @@ All notable changes to this project will be documented in this file.
 
 - King's `MovePattern` validation with tests;
 - Queen's `MovePattern` validation with tests;
+- Rook's `MovePattern` validation with tests;
+- Bishop's `MovePattern` validation with tests;
+- Knight's `MovePattern` validation with tests;
 - Some useful methods for the domain API.

@@ -28,8 +28,10 @@ object TestData {
 
   val whiteKing: Piece = Piece(White, King)
   val blackKing: Piece = Piece(Black, King)
-
   val whiteQueen: Piece = Piece(White, Queen)
+  val whiteRook: Piece = Piece(White, Rook)
+  val whiteBishop: Piece = Piece(White, Bishop)
+  val whiteKnight: Piece = Piece(White, Knight)
 
   val emptyGameState: GameState = TestUtils.createGameState()
 }
