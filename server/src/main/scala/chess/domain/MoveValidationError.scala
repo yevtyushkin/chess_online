@@ -13,7 +13,7 @@ object MoveValidationError extends Enum[MoveValidationError] {
   case object IdenticalStartAndDestinationCoordinates
       extends MoveValidationError
 
-  case object MoveNotInOrder extends MoveValidationError
+  case object WrongPieceColor extends MoveValidationError
 
   case object DestinationSquareTakenByAllyPiece extends MoveValidationError
 

@@ -6,6 +6,8 @@ import chess.domain.CoordinateRank._
 import chess.domain.PieceType._
 import chess.domain.Side._
 
+import TestData._
+
 object TestUtils {
   def createGameState(
       movesNow: Side = White,
@@ -32,4 +34,15 @@ object TestUtils {
       file: CoordinateFile = A,
       rank: CoordinateRank = `1`
   ): Coordinate = Coordinate(file, rank)
+
+  def stateWithPiece(piece: Piece, at: Coordinate)(
+      state: GameState = emptyGameState
+  ): GameState =
+    state.copy(
+      board = Chessboard(
+        state.board.squares ++ Map(
+          at -> Square(Some(piece))
+        )
+      )
+    )
 }

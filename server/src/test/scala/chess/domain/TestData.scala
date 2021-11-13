@@ -21,16 +21,25 @@ object TestData {
   val Seq(h1, h2, h3, h4, h5, h6, h7, h8) = makeChessRow(H)
 
   val whitePawn: Piece = Piece(White, Pawn)
-  val whitePawnSquare: Square = Square(Some(whitePawn))
-
   val blackPawn: Piece = Piece(Black, Pawn)
+  val whitePawnSquare: Square = Square(Some(whitePawn))
   val blackPawnSquare: Square = Square(Some(blackPawn))
 
   val whiteKing: Piece = Piece(White, King)
   val blackKing: Piece = Piece(Black, King)
+
   val whiteQueen: Piece = Piece(White, Queen)
+
   val whiteRook: Piece = Piece(White, Rook)
+  val blackRook: Piece = Piece(Black, Rook)
+  val whiteRookSquare: Square = Square(Some(whiteRook))
+  val blackRookSquare: Square = Square(Some(blackRook))
+
   val whiteBishop: Piece = Piece(White, Bishop)
+  val blackBishop: Piece = Piece(White, Bishop)
+  val whiteBishopSquare: Square = Square(Some(whiteBishop))
+  val blackBishopSquare: Square = Square(Some(blackBishop))
+
   val whiteKnight: Piece = Piece(White, Knight)
 
   val emptyGameState: GameState = TestUtils.createGameState()
