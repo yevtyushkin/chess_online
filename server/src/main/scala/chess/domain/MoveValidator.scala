@@ -215,12 +215,10 @@ object MoveValidator extends MoveValidator {
       bySide: Side,
       gameState: GameState
   ): Boolean =
-    gameState.board.pieceMap.exists {
-      case (startingCoordinate, piece) =>
-        piece.side == bySide && validatePattern(
-          Move(piece, from = startingCoordinate, to = coordinate),
-          gameState
-        ).isRight
-      case _ => false
+    gameState.board.pieceMap.exists { case (startingCoordinate, piece) =>
+      piece.side == bySide && validatePattern(
+        Move(piece, from = startingCoordinate, to = coordinate),
+        gameState
+      ).isRight
     }
 }
