@@ -63,14 +63,14 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           ).left.value shouldEqual IdenticalStartAndDestinationCoordinates
         }
 
-        "when the destination square is already taken by an allied piece" in {
+        "when the destination is already taken by an allied piece" in {
           val whitePawnAtA3State =
             stateWithPiece(whitePawn, a3)(whitePawnAtA2State)
 
           validateStartAndDestinationCoordinates(
             move = Move(whitePawn, a2, a3),
             gameState = whitePawnAtA3State
-          ).left.value shouldEqual DestinationSquareTakenByAllyPiece
+          ).left.value shouldEqual DestinationTakenByAllyPiece
         }
       }
 
@@ -156,10 +156,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val attacksGameState = emptyGameState.copy(
               board = Chessboard(
                 Map(
-                  d5 -> blackPawnSquare,
-                  f5 -> blackPawnSquare,
-                  d4 -> whitePawnSquare,
-                  f4 -> whitePawnSquare
+                  d5 -> blackPawn,
+                  f5 -> blackPawn,
+                  d4 -> whitePawn,
+                  f4 -> whitePawn
                 )
               )
             )
@@ -178,7 +178,7 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
                 validatePattern(
                   move,
                   gameState = emptyGameState.copy(
-                    enPassantSquareOption = Some(to)
+                    enPassantCoordinateOption = Some(to)
                   )
                 ).value shouldEqual Attack(expectedAttackedPieceCoordinate)
             }
@@ -195,8 +195,8 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val gameStateWithNonEmptySquares = emptyGameState.copy(
               board = Chessboard(
                 Map(
-                  e3 -> blackPawnSquare,
-                  e5 -> blackPawnSquare
+                  e3 -> blackPawn,
+                  e5 -> blackPawn
                 )
               )
             )
@@ -211,8 +211,8 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val gameStateWithBarriers = emptyGameState.copy(
               board = Chessboard(
                 Map(
-                  e3 -> whitePawnSquare,
-                  e6 -> blackPawnSquare
+                  e3 -> whitePawn,
+                  e6 -> whitePawn
                 )
               )
             )
@@ -253,10 +253,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val gameState = emptyGameState.copy(board =
               Chessboard(
                 Map(
-                  a1 -> blackPawnSquare,
-                  c1 -> blackPawnSquare,
-                  a8 -> whitePawnSquare,
-                  c8 -> whitePawnSquare
+                  a1 -> blackPawn,
+                  c1 -> blackPawn,
+                  a8 -> whitePawn,
+                  c8 -> whitePawn
                 )
               )
             )
@@ -282,7 +282,7 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
         )
         val kingSurroundedByPawnsState = emptyGameState.copy(
           board = Chessboard(
-            kingMoves.map(move => move.to -> blackPawnSquare).toMap
+            kingMoves.map(move => move.to -> blackPawn).toMap
           )
         )
 
@@ -357,10 +357,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val castlingsWithBarriersState = allCastlingsAvailableState.copy(
               board = Chessboard(
                 Map(
-                  b1 -> whitePawnSquare,
-                  d8 -> whitePawnSquare,
-                  f1 -> whitePawnSquare,
-                  f8 -> whitePawnSquare
+                  b1 -> whitePawn,
+                  d8 -> whitePawn,
+                  f1 -> whitePawn,
+                  f8 -> whitePawn
                 )
               )
             )
@@ -375,10 +375,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val castlingsBlockedByRooksState = emptyGameState.copy(board =
               Chessboard(
                 Map(
-                  d5 -> whiteRookSquare,
-                  d4 -> blackRookSquare,
-                  f5 -> whiteRookSquare,
-                  f4 -> blackRookSquare
+                  d5 -> whiteRook,
+                  d4 -> blackRook,
+                  f5 -> whiteRook,
+                  f4 -> blackRook
                 )
               )
             )
@@ -394,8 +394,8 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
               emptyGameState.copy(board =
                 Chessboard(
                   Map(
-                    c5 -> whiteRookSquare,
-                    c4 -> blackRookSquare
+                    c5 -> whiteRook,
+                    c4 -> blackRook
                   )
                 )
               )
@@ -411,8 +411,8 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
               emptyGameState.copy(board =
                 Chessboard(
                   Map(
-                    e3 -> blackRookSquare,
-                    e6 -> whiteRookSquare
+                    e3 -> blackRook,
+                    e6 -> whiteRook
                   )
                 )
               )
@@ -429,7 +429,7 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
       val pawnAtA1State = emptyGameState.copy(
         board = Chessboard(
           Map(
-            a1 -> whitePawnSquare
+            a1 -> whitePawn
           )
         )
       )
@@ -437,9 +437,9 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
       val barriersGameState = emptyGameState.copy(
         board = Chessboard(
           Map(
-            a4 -> whitePawnSquare,
-            c3 -> whitePawnSquare,
-            d1 -> whitePawnSquare
+            a4 -> whitePawn,
+            c3 -> whitePawn,
+            d1 -> whitePawn
           )
         )
       )
@@ -651,10 +651,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             val knightAttacksState = emptyGameState.copy(
               board = Chessboard(
                 Map(
-                  f6 -> whitePawnSquare,
-                  g3 -> whitePawnSquare,
-                  d2 -> whitePawnSquare,
-                  c5 -> whitePawnSquare
+                  f6 -> whitePawn,
+                  g3 -> whitePawn,
+                  d2 -> whitePawn,
+                  c5 -> whitePawn
                 )
               )
             )

@@ -8,7 +8,7 @@ final case class GameState(
     board: Chessboard,
     castlingsForWhite: List[CastlingType],
     castlingsForBlack: List[CastlingType],
-    enPassantSquareOption: Option[Coordinate]
+    enPassantCoordinateOption: Option[Coordinate]
 ) {
   def castingAvailable(forSide: Side, castlingType: CastlingType): Boolean = {
     val selectFrom =
@@ -25,6 +25,6 @@ object GameState {
     board = Chessboard.initial,
     castlingsForWhite = CastlingType.values.toList,
     castlingsForBlack = CastlingType.values.toList,
-    enPassantSquareOption = None
+    enPassantCoordinateOption = None
   )
 }

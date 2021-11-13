@@ -6,18 +6,16 @@ import chess.domain.CoordinateFile._
 import chess.domain.CoordinateRank._
 import chess.domain.PieceType._
 
-final case class Chessboard(squares: Map[Coordinate, Square]) {
-  def pieceAt(c: Coordinate): Option[Piece] =
-    squares.getOrElse(c, Square(None)).pieceOption
+final case class Chessboard(pieceMap: Map[Coordinate, Piece]) {
+  def pieceAt(c: Coordinate): Option[Piece] = pieceMap.get(c)
 }
 
 object Chessboard {
   def initial: Chessboard = {
-    val squares = for {
+    val pieces = for {
       file <- CoordinateFile.values
       rank <- CoordinateRank.values
-
-      pieceOption = for {
+      piece <- for {
         pieceType <- rank match {
           case `2` | `7` => Some(Pawn)
           case `1` | `8` =>
@@ -33,8 +31,8 @@ object Chessboard {
 
         pieceSide = if (rank == `1` || rank == `2`) White else Black
       } yield Piece(pieceSide, pieceType)
-    } yield (Coordinate(file, rank), Square(pieceOption))
+    } yield (Coordinate(file, rank), piece)
 
-    Chessboard(Map.from(squares))
+    Chessboard(Map.from(pieces))
   }
 }

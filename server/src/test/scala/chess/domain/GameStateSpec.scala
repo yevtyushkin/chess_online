@@ -50,7 +50,7 @@ class GameStateSpec extends AnyFreeSpec {
       }
 
       "doesn't have an en passant square" in {
-        initial.enPassantSquareOption shouldEqual None
+        initial.enPassantCoordinateOption shouldEqual None
       }
     }
   }

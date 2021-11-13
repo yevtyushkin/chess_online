@@ -14,21 +14,18 @@ object TestUtils {
       board: Chessboard = Chessboard(Map.empty),
       castlingsForWhite: List[CastlingType] = Nil,
       castlingsForBlack: List[CastlingType] = Nil,
-      enPassantSquareOption: Option[Coordinate] = None
+      enPassantCoordinateOption: Option[Coordinate] = None
   ): GameState =
     GameState(
       movesNow,
       board,
       castlingsForWhite,
       castlingsForBlack,
-      enPassantSquareOption
+      enPassantCoordinateOption
     )
 
   def createPiece(side: Side = White, pieceType: PieceType = Pawn): Piece =
     Piece(side, pieceType)
-
-  def createSquare(pieceOption: Option[Piece] = Some(createPiece())): Square =
-    Square(pieceOption)
 
   def createCoordinate(
       file: CoordinateFile = A,
@@ -40,8 +37,8 @@ object TestUtils {
   ): GameState =
     state.copy(
       board = Chessboard(
-        state.board.squares ++ Map(
-          at -> Square(Some(piece))
+        state.board.pieceMap ++ Map(
+          at -> piece
         )
       )
     )

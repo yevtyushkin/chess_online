@@ -7,10 +7,10 @@ import chess.domain.CoordinateRank._
 import chess.domain.PieceType._
 
 import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers.contain
+import org.scalatest.matchers.must.Matchers.{contain, have}
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
-import scala.language.implicitConversions
+import scala.language.{implicitConversions, postfixOps}
 
 class ChessboardSpec extends AnyFreeSpec {
   import TestData._
@@ -18,13 +18,13 @@ class ChessboardSpec extends AnyFreeSpec {
   "Chessboard" - {
     "pieceAt" - {
       val piece = TestUtils.createPiece()
-      val chessboard = Chessboard(Map(a1 -> Square(Some(piece))))
+      val chessboard = Chessboard(Map(a1 -> piece))
 
-      "should return a piece option of the square located at the given coordinate" in {
+      "should return a piece located at the given coordinate" in {
         chessboard.pieceAt(a1) shouldEqual Some(piece)
       }
 
-      "should return none if there is no square with such coordinate in the map" in {
+      "should return none if there is no piece at the given coordinate" in {
         chessboard.pieceAt(b1) shouldEqual None
       }
     }
@@ -32,15 +32,8 @@ class ChessboardSpec extends AnyFreeSpec {
     "initial" - {
       val initial = Chessboard.initial
 
-      "should contain 64 squares" in {
-        initial.squares.size shouldEqual 64
-      }
-
-      "should contain 32 squares with pieces" in {
-        initial.squares.count {
-          case (_, Square(Some(_))) => true
-          case _                    => false
-        } shouldEqual 32
+      "should contain 32 pieces" in {
+        initial.pieceMap should have size 32
       }
 
       "white side should" - {
@@ -121,14 +114,9 @@ class ChessboardSpec extends AnyFreeSpec {
           correctCoordinates: Seq[Coordinate]
       ): Unit = {
         "have correct coordinates" in {
-          initial.squares
-            .filter {
-              case (_, Square(Some(piece))) => piece == pieceUnderTest
-              case _                        => false
-            }
-            .map { case (coordinate, _) =>
-              coordinate
-            } should contain theSameElementsAs correctCoordinates
+          initial.pieceMap.collect {
+            case square @ (_, piece) if piece == pieceUnderTest => square
+          }.keys should contain theSameElementsAs correctCoordinates
         }
       }
     }

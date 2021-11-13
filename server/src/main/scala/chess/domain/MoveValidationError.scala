@@ -15,7 +15,7 @@ object MoveValidationError extends Enum[MoveValidationError] {
 
   case object WrongPieceColor extends MoveValidationError
 
-  case object DestinationSquareTakenByAllyPiece extends MoveValidationError
+  case object DestinationTakenByAllyPiece extends MoveValidationError
 
   case object InvalidMovePattern extends MoveValidationError
 }

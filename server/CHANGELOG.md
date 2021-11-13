@@ -72,3 +72,13 @@ All notable changes to this project will be documented in this file.
 - Bishop's `MovePattern` validation with tests;
 - Knight's `MovePattern` validation with tests;
 - Some useful methods for the domain API.
+
+### 13.11.2021
+
+### Added
+
+- Additional validation for castlings (that the king does not pass beaten squares).
+
+### Removed
+
+- Square ADT as it is redundant.

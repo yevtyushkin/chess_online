@@ -56,7 +56,7 @@ object MoveValidator extends MoveValidator {
           !pieceAtDestination.exists(_.side == gameState.movesNow)
         },
         right = move,
-        left = DestinationSquareTakenByAllyPiece
+        left = DestinationTakenByAllyPiece
       )
 
     for {
@@ -99,7 +99,7 @@ object MoveValidator extends MoveValidator {
     def validateForPawn: ErrorOr[MovePattern] = {
       lazy val isFirstMove = List(`2`, `7`).contains(move.from.rank)
       lazy val isEnPassantAttack =
-        gameState.enPassantSquareOption.contains(move.to)
+        gameState.enPassantCoordinateOption.contains(move.to)
 
       // We care only about forward moves which patterns are (_, 1) | (0, 2).
       // Move 2 squares forward for white and for black would have the following patterns respectively: (0, 2) and (0, -2).
@@ -215,8 +215,8 @@ object MoveValidator extends MoveValidator {
       bySide: Side,
       gameState: GameState
   ): Boolean =
-    gameState.board.squares.exists {
-      case (startingCoordinate, Square(Some(piece))) =>
+    gameState.board.pieceMap.exists {
+      case (startingCoordinate, piece) =>
         piece.side == bySide && validatePattern(
           Move(piece, from = startingCoordinate, to = coordinate),
           gameState
