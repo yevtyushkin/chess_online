@@ -6,6 +6,7 @@ import chess.domain.MovePattern._
 import chess.domain.MoveValidationError._
 import chess.domain.Side._
 
+import cats.implicits.catsSyntaxEitherId
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
@@ -684,6 +685,54 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
             testInvalid(moves = invalidMoves, state = emptyGameState)
           }
         }
+      }
+    }
+
+    "validate" - {
+      val move = Move(whitePawn, a1, a2)
+      val pattern = Transition()
+      val error = InvalidMovePattern.asLeft
+
+      def createValidatorStub(
+          pieceColorValidationResult: ErrorOr[Move] = move.asRight,
+          coordinatesValidationResult: ErrorOr[Move] = move.asRight,
+          patternValidationResult: ErrorOr[MovePattern] = pattern.asRight
+      ): MoveValidator = new MoveValidator {
+        override def validatePieceColor(
+            move: Move,
+            gameState: GameState
+        ): ErrorOr[Move] = pieceColorValidationResult
+
+        override def validateStartAndDestinationCoordinates(
+            move: Move,
+            gameState: GameState
+        ): ErrorOr[Move] = coordinatesValidationResult
+
+        override def validatePattern(
+            move: Move,
+            gameState: GameState
+        ): ErrorOr[MovePattern] = patternValidationResult
+      }
+
+      "should return an error if piece color validation fails" in {
+        createValidatorStub(pieceColorValidationResult = error)
+          .validate(move, emptyGameState) shouldEqual error
+      }
+
+      "should return an error if coordinates validation fails" in {
+        createValidatorStub(coordinatesValidationResult = error)
+          .validate(move, emptyGameState) shouldEqual error
+      }
+
+      "should return an error if move pattern validation fails" in {
+        createValidatorStub(patternValidationResult = error)
+          .validate(move, emptyGameState) shouldEqual error
+      }
+
+      "should return the move and the pattern if all validation succeeds" in {
+        createValidatorStub()
+          .validate(move, emptyGameState)
+          .value shouldEqual (move, pattern)
       }
     }
   }

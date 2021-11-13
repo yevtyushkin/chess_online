@@ -28,6 +28,15 @@ trait MoveValidator {
       move: Move,
       gameState: GameState
   ): ErrorOr[MovePattern]
+
+  final def validate(
+      move: Move,
+      gameState: GameState
+  ): ErrorOr[(Move, MovePattern)] = for {
+    _ <- validatePieceColor(move, gameState)
+    _ <- validateStartAndDestinationCoordinates(move, gameState)
+    pattern <- validatePattern(move, gameState)
+  } yield (move, pattern)
 }
 
 object MoveValidator extends MoveValidator {
