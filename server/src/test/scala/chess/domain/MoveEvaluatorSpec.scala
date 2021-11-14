@@ -66,6 +66,24 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
             ).castlingsForWhite shouldEqual List(KingSide)
           }
 
+          "does not affect available castlings for rook moves from non-starting position" in {
+            val moves = List(
+              Move(whiteRook, e1, e2),
+              Move(whiteRook, h2, h3),
+              Move(whiteRook, a8, a7)
+            )
+
+            moves.foreach { move =>
+              updateState(
+                move,
+                transition,
+                allCastlingsAvailableState.copy(castlingsForWhite =
+                  List(KingSide)
+                )
+              ).castlingsForWhite shouldEqual List(KingSide)
+            }
+          }
+
           "for other piece types moves" in {
             updateState(
               Move(whitePawn, a1, a2),
@@ -143,6 +161,24 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
               attack,
               allCastlingsAvailableState
             ).castlingsForWhite shouldEqual List(KingSide)
+          }
+
+          "does not affect available castlings for rook moves from non-starting position" in {
+            val moves = List(
+              Move(whiteRook, e1, e2),
+              Move(whiteRook, h2, h3),
+              Move(whiteRook, a8, a7)
+            )
+
+            moves.foreach { move =>
+              updateState(
+                move,
+                Attack(move.to),
+                allCastlingsAvailableState.copy(castlingsForWhite =
+                  List(KingSide)
+                )
+              ).castlingsForWhite shouldEqual List(KingSide)
+            }
           }
 
           "for other piece types moves" in {

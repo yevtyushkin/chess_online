@@ -3,10 +3,12 @@ package chess.domain
 
 import chess.domain.CastlingType._
 import chess.domain.CoordinateFile._
+import chess.domain.CoordinateRank._
 import chess.domain.MovePattern._
 import chess.domain.MoveValidationError.KingNotSafeAfterMove
 import chess.domain.MoveValidator.ErrorOr
 import chess.domain.PieceType._
+import chess.domain.Side._
 
 trait MoveEvaluator {
 
@@ -49,11 +51,18 @@ object MoveEvaluator extends MoveEvaluator {
       move.piece.pieceType match {
         case King => Nil
         case Rook =>
+          val isFirstRooksMove =
+            (gameState.movesNow == White && move.from.rank == `1`) ||
+              (gameState.movesNow == Black && move.from.rank == `8`)
+
           move.from.file match {
-            case A => gameState.castingsAvailable.filter(_ != QueenSide)
-            case H => gameState.castingsAvailable.filter(_ != KingSide)
+            case A if isFirstRooksMove =>
+              gameState.castingsAvailable.filter(_ != QueenSide)
+            case H if isFirstRooksMove =>
+              gameState.castingsAvailable.filter(_ != KingSide)
             case _ => gameState.castingsAvailable
           }
+
         case _ => gameState.castingsAvailable
       }
     val movesNext = gameState.movesNow.opposite
