@@ -73,7 +73,11 @@ object MoveEvaluator extends MoveEvaluator {
 
       case Attack(attackedCoordinate) =>
         updatedState.copy(
-          board = Chessboard(updatedSquares - attackedCoordinate)
+          board = Chessboard(
+            if (attackedCoordinate != move.to)
+              updatedSquares - attackedCoordinate
+            else updatedSquares
+          )
         )
 
       case Castling(castlingType) =>
