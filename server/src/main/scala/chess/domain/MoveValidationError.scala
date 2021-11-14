@@ -18,4 +18,6 @@ object MoveValidationError extends Enum[MoveValidationError] {
   case object DestinationTakenByAllyPiece extends MoveValidationError
 
   case object InvalidMovePattern extends MoveValidationError
+
+  case object KingNotSafeAfterMove extends MoveValidationError
 }

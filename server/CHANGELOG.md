@@ -82,3 +82,10 @@ All notable changes to this project will be documented in this file.
 ### Removed
 
 - Square ADT as it is redundant.
+
+### 14.11.2011
+
+### Added
+
+- `MoveEvaluator` with tests;
+- Some minor usable methods to `GameState`.

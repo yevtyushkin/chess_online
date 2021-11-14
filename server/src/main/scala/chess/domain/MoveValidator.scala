@@ -29,7 +29,7 @@ trait MoveValidator {
       gameState: GameState
   ): ErrorOr[MovePattern]
 
-  final def validate(
+  def validate(
       move: Move,
       gameState: GameState
   ): ErrorOr[(Move, MovePattern)] = for {
@@ -183,7 +183,7 @@ object MoveValidator extends MoveValidator {
         case _ =>
           (for {
             castlingType <- castlingType
-            if gameState.castingAvailable(side, castlingType)
+            if gameState.castingsAvailable.contains(castlingType)
           } yield Castling(castlingType)).toRight(left = InvalidMovePattern)
       }
     }

@@ -11,22 +11,36 @@ class GameStateSpec extends AnyFreeSpec {
   "GameState" - {
     import TestData.emptyGameState
 
+    val castlingsForWhite = List(QueenSide)
+    val castlingsForBlack = List(KingSide)
+
     "castlingAvailable" - {
-      val queenSideForWhite = List(QueenSide)
-      val kingSideForBlack = List(KingSide)
       val gameState = emptyGameState.copy(
-        castlingsForWhite = queenSideForWhite,
-        castlingsForBlack = kingSideForBlack
+        castlingsForWhite = castlingsForWhite,
+        castlingsForBlack = castlingsForBlack
       )
 
-      "should return true if the castling type is available for the given side" - {
-        gameState.castingAvailable(White, QueenSide) shouldBe true
-        gameState.castingAvailable(Black, KingSide) shouldBe true
+      "should return all available castlings for the side that moves now" - {
+        gameState
+          .copy(movesNow = White)
+          .castingsAvailable shouldEqual castlingsForWhite
+        gameState
+          .copy(movesNow = Black)
+          .castingsAvailable shouldEqual castlingsForBlack
       }
+    }
 
-      "should return false if the castling type isn't available for the given side" - {
-        gameState.castingAvailable(White, KingSide) shouldBe false
-        gameState.castingAvailable(Black, QueenSide) shouldBe false
+    "updateCastlings" - {
+      "returns new state with the updated castlings for the side that moves now" - {
+        emptyGameState
+          .copy(movesNow = White)
+          .updateCastlings(castlingsForWhite)
+          .castlingsForWhite shouldEqual castlingsForWhite
+
+        emptyGameState
+          .copy(movesNow = Black)
+          .updateCastlings(castlingsForBlack)
+          .castlingsForBlack shouldEqual castlingsForBlack
       }
     }
 

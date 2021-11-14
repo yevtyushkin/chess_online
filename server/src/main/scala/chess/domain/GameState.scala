@@ -10,13 +10,13 @@ final case class GameState(
     castlingsForBlack: List[CastlingType],
     enPassantCoordinateOption: Option[Coordinate]
 ) {
-  def castingAvailable(forSide: Side, castlingType: CastlingType): Boolean = {
-    val selectFrom =
-      if (forSide == White) castlingsForWhite
-      else castlingsForBlack
+  def castingsAvailable: List[CastlingType] =
+    if (movesNow == White) castlingsForWhite
+    else castlingsForBlack
 
-    selectFrom.contains(castlingType)
-  }
+  def updateCastlings(newCastlings: List[CastlingType]): GameState =
+    if (movesNow == White) copy(castlingsForWhite = newCastlings)
+    else copy(castlingsForBlack = newCastlings)
 }
 
 object GameState {
