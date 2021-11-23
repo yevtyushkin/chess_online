@@ -89,3 +89,9 @@ All notable changes to this project will be documented in this file.
 
 - `MoveEvaluator` with tests;
 - Some minor usable methods to `GameState`.
+
+### 23.11.2021
+
+### Changed
+
+- `MoveValidator`, `MoveEvaluator` with companion objects according suggestions.

@@ -6,13 +6,9 @@ final case class Move(
     from: Coordinate,
     to: Coordinate
 ) {
-  def as2DVector: (Int, Int) = {
-    val fileIndex: CoordinateFile => Int = CoordinateFile.indexOf
-    val rankIndex: CoordinateRank => Int = CoordinateRank.indexOf
-
+  def as2DVector: (Int, Int) =
     (
-      fileIndex(to.file) - fileIndex(from.file),
-      rankIndex(to.rank) - rankIndex(from.rank)
+      CoordinateFile.indexOf(to.file) - CoordinateFile.indexOf(from.file),
+      CoordinateRank.indexOf(to.rank) - CoordinateRank.indexOf(from.rank)
     )
-  }
 }

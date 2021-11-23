@@ -3,11 +3,8 @@ package chess.domain
 
 import chess.domain.CastlingType.{KingSide, QueenSide}
 import chess.domain.MovePattern._
-import chess.domain.MoveValidationError.{
-  InvalidMovePattern,
-  KingNotSafeAfterMove,
-  WrongPieceColor
-}
+import chess.domain.MoveValidationError._
+import chess.domain.MoveValidator.ErrorOr
 import chess.domain.Side._
 
 import cats.implicits.catsSyntaxEitherId
@@ -19,191 +16,221 @@ import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
 class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
   "MoveEvaluator" - {
-    import MoveEvaluator._
     import TestData._
 
-    val moveValidatorMock = mock[MoveValidator]
+    val moveValidatorMock = stub[MoveValidator]
+    val moveEvaluator = MoveEvaluator(moveValidatorMock)
+
     val defaultMove = Move(whitePawn, a1, a2)
-    val transition = Transition()
+    val defaultError = WrongPieceColor.asLeft
+    val transition = Transition().asRight
+
     val allCastlingsAvailableState = emptyGameState.copy(
       movesNow = White,
       castlingsForWhite = CastlingType.values.toList,
       castlingsForBlack = CastlingType.values.toList
     )
 
-    "updateState" - {
+    val kingNotSafeAfterMoveState = emptyGameState.copy(
+      board = Chessboard(
+        Map(
+          a1 -> whiteKing,
+          a8 -> blackRook
+        )
+      )
+    )
+
+    "evaluate" - {
+      "returns an error if move validation fails" in {
+        evaluateMove(
+          defaultMove,
+          patternResult = defaultError
+        ) shouldEqual defaultError
+      }
+
       "for transitions" - {
         "updates which side moves now correctly" in {
-          updateState(
+          evaluateMove(
             defaultMove,
-            transition,
-            emptyGameState
-          ).movesNow shouldEqual emptyGameState.movesNow.opposite
+            state = emptyGameState
+          ).value.movesNow shouldEqual emptyGameState.movesNow.opposite
         }
 
         "updates available castlings correctly" - {
           "for king moves" in {
-            updateState(
+            evaluateMove(
               Move(whiteKing, a1, a2),
-              transition,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual Nil
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual Nil
           }
 
           "for king side rook moves" in {
-            updateState(
+            evaluateMove(
               Move(whiteRook, h1, h2),
-              transition,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual List(QueenSide)
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual List(QueenSide)
           }
 
           "for queen side rook moves" in {
-            updateState(
+            evaluateMove(
               Move(whiteRook, a1, a2),
-              transition,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual List(KingSide)
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual List(KingSide)
           }
 
           "does not affect available castlings for rook moves from non-starting position" in {
+            val expectedCastlings = List(KingSide)
+
             val moves = List(
               Move(whiteRook, e1, e2),
               Move(whiteRook, h2, h3),
               Move(whiteRook, a8, a7)
             )
 
-            moves.foreach { move =>
-              updateState(
-                move,
-                transition,
-                allCastlingsAvailableState.copy(castlingsForWhite =
-                  List(KingSide)
-                )
-              ).castlingsForWhite shouldEqual List(KingSide)
-            }
+            testMoves(
+              moves,
+              state =
+                allCastlingsAvailableState.updateCastlings(expectedCastlings)
+            )(result => result.value.castlingsForWhite == expectedCastlings)
           }
+        }
 
-          "for other piece types moves" in {
-            updateState(
-              Move(whitePawn, a1, a2),
-              transition,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
-          }
+        "for other piece types moves" in {
+          evaluateMove(
+            Move(whitePawn, a1, a2),
+            state = allCastlingsAvailableState
+          ).value.castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
         }
 
         "updates chessboard correctly" in {
           val pawnAtA1 = emptyGameState.copy(
-            board = Chessboard(Map(a1 -> whitePawn))
+            board = Chessboard(Map(a2 -> whitePawn))
           )
 
-          updateState(
-            move = Move(whitePawn, a1, h8),
-            transition,
-            pawnAtA1
-          ).board shouldEqual Chessboard(Map(h8 -> whitePawn))
+          evaluateMove(
+            move = Move(whitePawn, a2, a4),
+            state = pawnAtA1
+          ).value.board shouldEqual Chessboard(Map(a4 -> whitePawn))
         }
 
         "updates en passant coordinate correctly" - {
           "sets the new en passant coordinate" in {
-            updateState(
+            evaluateMove(
               defaultMove,
-              Transition(enPassantCoordinateOption = Some(a2)),
-              emptyGameState
-            ).enPassantCoordinateOption.value shouldEqual a2
+              patternResult =
+                Transition(enPassantCoordinateOption = Some(a2)).asRight,
+              state = emptyGameState
+            ).value.enPassantCoordinateOption.value shouldEqual a2
           }
 
           "clears en passant coordinate" in {
-            updateState(
+            evaluateMove(
               defaultMove,
-              Transition(),
-              emptyGameState.copy(enPassantCoordinateOption = Some(a1))
-            ).enPassantCoordinateOption shouldEqual None
+              state = emptyGameState.copy(enPassantCoordinateOption = Some(a1))
+            ).value.enPassantCoordinateOption shouldEqual None
           }
+        }
+
+        "returns an error if the king is not safe after move" in {
+          evaluateMove(
+            Move(whiteKing, a1, a2),
+            patternResult = transition,
+            state = kingNotSafeAfterMoveState,
+            isKingSafeAfterMove = false
+          ) shouldEqual KingNotSafeAfterMove.asLeft
         }
       }
 
       "for attacks" - {
-        val attack = Attack(e4)
-        val pawnAtE4State = emptyGameState.copy(
-          board = Chessboard(Map(e4 -> blackPawn))
-        )
+        val attack = Attack(e4).asRight
 
         "updates which side moves now correctly" in {
-          updateState(
+          evaluateMove(
             defaultMove,
-            attack,
-            emptyGameState
-          ).movesNow shouldEqual emptyGameState.movesNow.opposite
+            patternResult = attack,
+            state = emptyGameState
+          ).value.movesNow shouldEqual emptyGameState.movesNow.opposite
         }
 
         "updates available castlings correctly" - {
           "for king moves" in {
-            updateState(
-              Move(whiteKing, a1, a2),
-              attack,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual Nil
+            evaluateMove(
+              Move(whiteKing, a3, a4),
+              patternResult = attack,
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual Nil
           }
 
           "for king side rook moves" in {
-            updateState(
+            evaluateMove(
               Move(whiteRook, h1, h2),
-              attack,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual List(QueenSide)
+              patternResult = attack,
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual List(QueenSide)
           }
 
           "for queen side rook moves" in {
-            updateState(
+            evaluateMove(
               Move(whiteRook, a1, a2),
-              attack,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual List(KingSide)
+              patternResult = attack,
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual List(KingSide)
           }
 
           "does not affect available castlings for rook moves from non-starting position" in {
+            val expectedCastlings = List(KingSide)
+
             val moves = List(
               Move(whiteRook, e1, e2),
               Move(whiteRook, h2, h3),
               Move(whiteRook, a8, a7)
             )
 
-            moves.foreach { move =>
-              updateState(
-                move,
-                Attack(move.to),
-                allCastlingsAvailableState.copy(castlingsForWhite =
-                  List(KingSide)
-                )
-              ).castlingsForWhite shouldEqual List(KingSide)
-            }
+            testMoves(
+              moves,
+              moveToPattern = _ => attack,
+              state = allCastlingsAvailableState.copy(castlingsForWhite =
+                expectedCastlings
+              )
+            )(result => result.value.castlingsForWhite == expectedCastlings)
           }
 
           "for other piece types moves" in {
-            updateState(
+            evaluateMove(
               Move(whitePawn, a1, a2),
-              attack,
-              allCastlingsAvailableState
-            ).castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
+              patternResult = attack,
+              state = allCastlingsAvailableState
+            ).value.castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
           }
         }
 
         "updates chessboard correctly" in {
-          updateState(
-            move = Move(whitePawn, a1, e4),
-            attack,
-            pawnAtE4State
-          ).board shouldEqual Chessboard(Map(e4 -> whitePawn))
+          val pawnAtE4State = emptyGameState.copy(
+            board = Chessboard(Map(e4 -> blackPawn))
+          )
+
+          evaluateMove(
+            move = Move(whiteRook, a1, e4),
+            patternResult = attack,
+            state = pawnAtE4State
+          ).value.board shouldEqual Chessboard(Map(e4 -> whiteRook))
         }
 
         "clears en passant coordinate correctly" in {
-          updateState(
+          evaluateMove(
             defaultMove,
-            attack,
-            emptyGameState.copy(enPassantCoordinateOption = Some(a1))
-          ).enPassantCoordinateOption shouldEqual None
+            patternResult = attack,
+            state = emptyGameState.copy(enPassantCoordinateOption = Some(a1))
+          ).value.enPassantCoordinateOption shouldEqual None
+        }
+
+        "returns an error if the king is not safe after move" in {
+          evaluateMove(
+            Move(whiteKing, a1, a2),
+            patternResult = attack,
+            state = kingNotSafeAfterMoveState,
+            isKingSafeAfterMove = false
+          ) shouldEqual KingNotSafeAfterMove.asLeft
         }
       }
 
@@ -218,141 +245,105 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
           )
         )
 
+        val queenSideCastlingMove = Move(whiteKing, e1, c1)
+        val kingSideCastlingMove = Move(whiteKing, e1, g1)
+        val queenSideCastling = Castling(QueenSide).asRight
+        val kingSideCastling = Castling(KingSide).asRight
+
         "updates which side moves now correctly" in {
-          updateState(
-            defaultMove,
-            Castling(KingSide),
-            whiteCastlingsState
-          ).movesNow shouldEqual emptyGameState.movesNow.opposite
+          evaluateMove(
+            queenSideCastlingMove,
+            patternResult = queenSideCastling,
+            state = whiteCastlingsState
+          ).value.movesNow shouldEqual emptyGameState.movesNow.opposite
         }
 
         "updates available castlings correctly" in {
-          updateState(
-            Move(whiteKing, e1, g1),
-            Castling(KingSide),
-            whiteCastlingsState
-          ).castlingsForWhite shouldEqual Nil
+          evaluateMove(
+            kingSideCastlingMove,
+            patternResult = kingSideCastling,
+            state = whiteCastlingsState
+          ).value.castlingsForWhite shouldEqual Nil
 
-          updateState(
-            Move(whiteKing, e1, c1),
-            Castling(QueenSide),
-            whiteCastlingsState
-          ).castlingsForWhite shouldEqual Nil
+          evaluateMove(
+            queenSideCastlingMove,
+            patternResult = queenSideCastling,
+            state = whiteCastlingsState
+          ).value.castlingsForWhite shouldEqual Nil
         }
 
         "updates chessboard correctly" in {
-          updateState(
-            Move(whiteKing, e1, g1),
-            Castling(KingSide),
-            whiteCastlingsState
-          ).board shouldEqual Chessboard(
-            Map(a1 -> whiteRook, g1 -> whiteKing, f1 -> whiteRook)
+          evaluateMove(
+            kingSideCastlingMove,
+            patternResult = kingSideCastling,
+            state = whiteCastlingsState
+          ).value.board.pieceMap shouldEqual Map(
+            a1 -> whiteRook,
+            g1 -> whiteKing,
+            f1 -> whiteRook
           )
 
-          updateState(
-            Move(whiteKing, e1, c1),
-            Castling(QueenSide),
-            whiteCastlingsState
-          ).board shouldEqual Chessboard(
-            Map(d1 -> whiteRook, c1 -> whiteKing, h1 -> whiteRook)
+          evaluateMove(
+            queenSideCastlingMove,
+            patternResult = queenSideCastling,
+            state = whiteCastlingsState
+          ).value.board.pieceMap shouldEqual Map(
+            d1 -> whiteRook,
+            c1 -> whiteKing,
+            h1 -> whiteRook
           )
         }
 
         "clears en passant coordinate correctly" in {
-          updateState(
-            defaultMove,
-            Castling(KingSide),
-            whiteCastlingsState.copy(enPassantCoordinateOption = Some(a1))
-          ).enPassantCoordinateOption shouldEqual None
+          evaluateMove(
+            kingSideCastlingMove,
+            patternResult = kingSideCastling,
+            state =
+              whiteCastlingsState.copy(enPassantCoordinateOption = Some(a1))
+          ).value.enPassantCoordinateOption shouldEqual None
+        }
+
+        "returns an error if the king is not safe after move" in {
+          evaluateMove(
+            kingSideCastlingMove,
+            patternResult = kingSideCastling,
+            state = whiteCastlingsState.copy(
+              board = Chessboard(Map(c8 -> blackRook))
+            ),
+            isKingSafeAfterMove = false
+          ) shouldEqual KingNotSafeAfterMove.asLeft
         }
       }
     }
 
-    "kingIsSafe" - {
-      val state = emptyGameState.copy(
-        board = Chessboard(
-          Map(
-            e1 -> whiteKing,
-            e8 -> blackRook
-          )
-        )
-      )
+    def evaluateMove(
+        move: Move,
+        patternResult: ErrorOr[MovePattern] = transition,
+        isKingSafeAfterMove: Boolean = true,
+        state: GameState = emptyGameState
+    ): ErrorOr[GameState] = {
+      // Mock MoveValidator.validate returned pattern.
+      moveValidatorMock.validate _ when (move, state) returns patternResult
 
-      "returns true if any of the enemy pieces can't attack the king" in {
-        (moveValidatorMock.validatePattern _)
-          .expects(Move(blackRook, e8, e1), state)
-          .returning(InvalidMovePattern.asLeft)
+      // Mock whether the king is safe after the evaluated move.
+      moveValidatorMock.validate _ when where { (_, gameState) =>
+        gameState.movesNow == move.piece.side.opposite
+      } returns (if (isKingSafeAfterMove) defaultError
+                 else Transition().asRight)
 
-        kingIsSafe(kingSide = White, gameState = state)(moveValidator =
-          moveValidatorMock
+      moveEvaluator.evaluate(move, state)
+    }
+
+    def testMoves(
+        moves: Seq[Move],
+        moveToPattern: Move => ErrorOr[MovePattern] = _ => transition,
+        moveToIsKingSave: Move => Boolean = _ => true,
+        state: GameState = emptyGameState
+    )(predicate: ErrorOr[GameState] => Boolean): Unit =
+      moves.foreach { move =>
+        predicate(
+          evaluateMove(move, moveToPattern(move), moveToIsKingSave(move), state)
         ) shouldBe true
       }
-
-      "returns false if any of the enemy pieces can attack the king" in {
-        (moveValidatorMock.validatePattern _)
-          .expects(Move(blackRook, e8, e1), state)
-          .returning(Attack(e1).asRight)
-
-        kingIsSafe(kingSide = White, gameState = state)(moveValidator =
-          moveValidatorMock
-        ) shouldBe false
-      }
-    }
-
-    "evaluate" - {
-      val move = Move(whitePawn, e2, e4)
-
-      def createEvaluatorStub(
-          stateUpdateResult: GameState = emptyGameState,
-          kingIsSafeResult: Boolean = true
-      ): MoveEvaluator =
-        new MoveEvaluator {
-          override def updateState(
-              move: Move,
-              movePattern: MovePattern,
-              gameState: GameState
-          ): GameState = stateUpdateResult
-
-          override def kingIsSafe(forSide: Side, gameState: GameState)(
-              moveValidator: MoveValidator
-          ): Boolean = kingIsSafeResult
-        }
-
-      "returns an error if move validation fails" in {
-        (moveValidatorMock.validate _)
-          .expects(move, emptyGameState)
-          .returning(WrongPieceColor.asLeft)
-
-        createEvaluatorStub()
-          .evaluate(move, emptyGameState)(
-            moveValidatorMock
-          )
-          .left
-          .value shouldEqual WrongPieceColor
-      }
-
-      "returns an error if the king is not safe after the move" in {
-        (moveValidatorMock.validate _)
-          .expects(move, emptyGameState)
-          .returning((move, Transition()).asRight)
-
-        createEvaluatorStub(kingIsSafeResult = false)
-          .evaluate(move, emptyGameState)(moveValidatorMock)
-          .left
-          .value shouldEqual KingNotSafeAfterMove
-      }
-
-      "returns the updated state if the move is valid and the king is safe after move" in {
-        (moveValidatorMock.validate _)
-          .expects(move, emptyGameState)
-          .returning((move, Transition()).asRight)
-        val expectedState = emptyGameState.copy(movesNow = Black)
-
-        createEvaluatorStub(
-          stateUpdateResult = expectedState
-        ).evaluate(move, emptyGameState)(moveValidatorMock)
-          .value shouldEqual expectedState
-      }
-    }
   }
 }
