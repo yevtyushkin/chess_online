@@ -95,3 +95,13 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - `MoveValidator`, `MoveEvaluator` with companion objects according suggestions.
+
+### 27.11.2021
+
+### Added
+
+- `UpdateGameStatus`.
+
+### Changed
+
+- Extracted `KingIsSafe`, fixed some class namings.

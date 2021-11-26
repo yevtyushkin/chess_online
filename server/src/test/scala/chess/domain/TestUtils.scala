@@ -3,20 +3,22 @@ package chess.domain
 
 import chess.domain.CoordinateFile._
 import chess.domain.CoordinateRank._
+import chess.domain.GameStatus.GameContinues
 import chess.domain.PieceType._
 import chess.domain.Side._
-
-import TestData._
+import chess.domain.TestData._
 
 object TestUtils {
   def createGameState(
       movesNow: Side = White,
+      status: GameStatus = GameContinues,
       board: Chessboard = Chessboard(Map.empty),
       castlingsForWhite: List[CastlingType] = Nil,
       castlingsForBlack: List[CastlingType] = Nil,
       enPassantCoordinateOption: Option[Coordinate] = None
   ): GameState =
     GameState(
+      status,
       movesNow,
       board,
       castlingsForWhite,

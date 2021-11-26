@@ -4,7 +4,7 @@ package chess.domain
 import chess.domain.CastlingType.{KingSide, QueenSide}
 import chess.domain.MovePattern._
 import chess.domain.MoveValidationError._
-import chess.domain.MoveValidator.ErrorOr
+import chess.domain.ValidateMove.ErrorOr
 import chess.domain.Side._
 
 import cats.implicits.catsSyntaxEitherId
@@ -14,12 +14,13 @@ import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
-class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
-  "MoveEvaluator" - {
+class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
+  "EvaluateMove" - {
     import TestData._
 
-    val moveValidatorMock = stub[MoveValidator]
-    val moveEvaluator = MoveEvaluator(moveValidatorMock)
+    val evaluateMoveStub = stub[ValidateMove]
+    val kingIsSafeStub = stub[KingIsSafe]
+    val evaluateMove = EvaluateMove(evaluateMoveStub, kingIsSafeStub)
 
     val defaultMove = Move(whitePawn, a1, a2)
     val defaultError = WrongPieceColor.asLeft
@@ -42,7 +43,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
 
     "evaluate" - {
       "returns an error if move validation fails" in {
-        evaluateMove(
+        setUpAndEvalMove(
           defaultMove,
           patternResult = defaultError
         ) shouldEqual defaultError
@@ -50,7 +51,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
 
       "for transitions" - {
         "updates which side moves now correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             defaultMove,
             state = emptyGameState
           ).value.movesNow shouldEqual emptyGameState.movesNow.opposite
@@ -58,21 +59,21 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
 
         "updates available castlings correctly" - {
           "for king moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteKing, a1, a2),
               state = allCastlingsAvailableState
             ).value.castlingsForWhite shouldEqual Nil
           }
 
           "for king side rook moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteRook, h1, h2),
               state = allCastlingsAvailableState
             ).value.castlingsForWhite shouldEqual List(QueenSide)
           }
 
           "for queen side rook moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteRook, a1, a2),
               state = allCastlingsAvailableState
             ).value.castlingsForWhite shouldEqual List(KingSide)
@@ -96,7 +97,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "for other piece types moves" in {
-          evaluateMove(
+          setUpAndEvalMove(
             Move(whitePawn, a1, a2),
             state = allCastlingsAvailableState
           ).value.castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
@@ -107,7 +108,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
             board = Chessboard(Map(a2 -> whitePawn))
           )
 
-          evaluateMove(
+          setUpAndEvalMove(
             move = Move(whitePawn, a2, a4),
             state = pawnAtA1
           ).value.board shouldEqual Chessboard(Map(a4 -> whitePawn))
@@ -115,7 +116,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
 
         "updates en passant coordinate correctly" - {
           "sets the new en passant coordinate" in {
-            evaluateMove(
+            setUpAndEvalMove(
               defaultMove,
               patternResult =
                 Transition(enPassantCoordinateOption = Some(a2)).asRight,
@@ -124,7 +125,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
           }
 
           "clears en passant coordinate" in {
-            evaluateMove(
+            setUpAndEvalMove(
               defaultMove,
               state = emptyGameState.copy(enPassantCoordinateOption = Some(a1))
             ).value.enPassantCoordinateOption shouldEqual None
@@ -132,7 +133,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "returns an error if the king is not safe after move" in {
-          evaluateMove(
+          setUpAndEvalMove(
             Move(whiteKing, a1, a2),
             patternResult = transition,
             state = kingNotSafeAfterMoveState,
@@ -145,7 +146,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         val attack = Attack(e4).asRight
 
         "updates which side moves now correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             defaultMove,
             patternResult = attack,
             state = emptyGameState
@@ -154,7 +155,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
 
         "updates available castlings correctly" - {
           "for king moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteKing, a3, a4),
               patternResult = attack,
               state = allCastlingsAvailableState
@@ -162,7 +163,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
           }
 
           "for king side rook moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteRook, h1, h2),
               patternResult = attack,
               state = allCastlingsAvailableState
@@ -170,7 +171,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
           }
 
           "for queen side rook moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whiteRook, a1, a2),
               patternResult = attack,
               state = allCastlingsAvailableState
@@ -196,7 +197,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
           }
 
           "for other piece types moves" in {
-            evaluateMove(
+            setUpAndEvalMove(
               Move(whitePawn, a1, a2),
               patternResult = attack,
               state = allCastlingsAvailableState
@@ -209,7 +210,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
             board = Chessboard(Map(e4 -> blackPawn))
           )
 
-          evaluateMove(
+          setUpAndEvalMove(
             move = Move(whiteRook, a1, e4),
             patternResult = attack,
             state = pawnAtE4State
@@ -217,7 +218,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "clears en passant coordinate correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             defaultMove,
             patternResult = attack,
             state = emptyGameState.copy(enPassantCoordinateOption = Some(a1))
@@ -225,7 +226,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "returns an error if the king is not safe after move" in {
-          evaluateMove(
+          setUpAndEvalMove(
             Move(whiteKing, a1, a2),
             patternResult = attack,
             state = kingNotSafeAfterMoveState,
@@ -251,7 +252,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         val kingSideCastling = Castling(KingSide).asRight
 
         "updates which side moves now correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             queenSideCastlingMove,
             patternResult = queenSideCastling,
             state = whiteCastlingsState
@@ -259,13 +260,13 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "updates available castlings correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             kingSideCastlingMove,
             patternResult = kingSideCastling,
             state = whiteCastlingsState
           ).value.castlingsForWhite shouldEqual Nil
 
-          evaluateMove(
+          setUpAndEvalMove(
             queenSideCastlingMove,
             patternResult = queenSideCastling,
             state = whiteCastlingsState
@@ -273,7 +274,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "updates chessboard correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             kingSideCastlingMove,
             patternResult = kingSideCastling,
             state = whiteCastlingsState
@@ -283,7 +284,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
             f1 -> whiteRook
           )
 
-          evaluateMove(
+          setUpAndEvalMove(
             queenSideCastlingMove,
             patternResult = queenSideCastling,
             state = whiteCastlingsState
@@ -295,7 +296,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "clears en passant coordinate correctly" in {
-          evaluateMove(
+          setUpAndEvalMove(
             kingSideCastlingMove,
             patternResult = kingSideCastling,
             state =
@@ -304,7 +305,7 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
         }
 
         "returns an error if the king is not safe after move" in {
-          evaluateMove(
+          setUpAndEvalMove(
             kingSideCastlingMove,
             patternResult = kingSideCastling,
             state = whiteCastlingsState.copy(
@@ -316,22 +317,19 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
       }
     }
 
-    def evaluateMove(
+    def setUpAndEvalMove(
         move: Move,
         patternResult: ErrorOr[MovePattern] = transition,
         isKingSafeAfterMove: Boolean = true,
         state: GameState = emptyGameState
     ): ErrorOr[GameState] = {
-      // Mock MoveValidator.validate returned pattern.
-      moveValidatorMock.validate _ when (move, state) returns patternResult
+      // Mock EvaluateMove.apply returned pattern.
+      evaluateMoveStub.apply _ when (move, state) returns patternResult
 
       // Mock whether the king is safe after the evaluated move.
-      moveValidatorMock.validate _ when where { (_, gameState) =>
-        gameState.movesNow == move.piece.side.opposite
-      } returns (if (isKingSafeAfterMove) defaultError
-                 else Transition().asRight)
+      kingIsSafeStub.apply _ when (*, *) returns isKingSafeAfterMove
 
-      moveEvaluator.evaluate(move, state)
+      evaluateMove.apply(move, state)
     }
 
     def testMoves(
@@ -342,7 +340,12 @@ class MoveEvaluatorSpec extends AnyFreeSpec with MockFactory with EitherValues {
     )(predicate: ErrorOr[GameState] => Boolean): Unit =
       moves.foreach { move =>
         predicate(
-          evaluateMove(move, moveToPattern(move), moveToIsKingSave(move), state)
+          setUpAndEvalMove(
+            move,
+            moveToPattern(move),
+            moveToIsKingSave(move),
+            state
+          )
         ) shouldBe true
       }
   }

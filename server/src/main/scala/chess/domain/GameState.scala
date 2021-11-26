@@ -1,9 +1,11 @@
 package com.chessonline
 package chess.domain
 
+import chess.domain.GameStatus.GameContinues
 import chess.domain.Side._
 
 final case class GameState(
+    status: GameStatus,
     movesNow: Side,
     board: Chessboard,
     castlingsForWhite: List[CastlingType],
@@ -22,6 +24,7 @@ final case class GameState(
 object GameState {
   def initial: GameState = GameState(
     movesNow = White,
+    status = GameContinues,
     board = Chessboard.initial,
     castlingsForWhite = CastlingType.values.toList,
     castlingsForBlack = CastlingType.values.toList,

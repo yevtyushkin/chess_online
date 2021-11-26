@@ -6,24 +6,24 @@ import chess.domain.CoordinateFile._
 import chess.domain.CoordinateRank._
 import chess.domain.MovePattern._
 import chess.domain.MoveValidationError._
-import chess.domain.MoveValidator.ErrorOr
+import chess.domain.ValidateMove.ErrorOr
 import chess.domain.PieceType._
 import chess.domain.Side._
 
 import cats.implicits.catsSyntaxEitherId
 
-trait MoveValidator {
-  def validate(
+trait ValidateMove {
+  def apply(
       move: Move,
       gameState: GameState
   ): ErrorOr[MovePattern]
 }
 
-object MoveValidator {
+object ValidateMove {
   type ErrorOr[A] = Either[MoveValidationError, A]
 
-  def apply(): MoveValidator = new MoveValidator {
-    override def validate(
+  def apply: ValidateMove = new ValidateMove {
+    override def apply(
         move: Move,
         gameState: GameState
     ): ErrorOr[MovePattern] = for {

@@ -2,6 +2,7 @@ package com.chessonline
 package chess.domain
 
 import chess.domain.CastlingType._
+import chess.domain.GameStatus.GameContinues
 import chess.domain.Side._
 
 import org.scalatest.freespec.AnyFreeSpec
@@ -20,7 +21,7 @@ class GameStateSpec extends AnyFreeSpec {
         castlingsForBlack = castlingsForBlack
       )
 
-      "should return all available castlings for the side that moves now" - {
+      "should return all available castlings for the side that moves now" in {
         gameState
           .copy(movesNow = White)
           .castingsAvailable shouldEqual castlingsForWhite
@@ -31,7 +32,7 @@ class GameStateSpec extends AnyFreeSpec {
     }
 
     "updateCastlings" - {
-      "returns new state with the updated castlings for the side that moves now" - {
+      "returns new state with the updated castlings for the side that moves now" in {
         emptyGameState
           .copy(movesNow = White)
           .updateCastlings(castlingsForWhite)
@@ -46,6 +47,10 @@ class GameStateSpec extends AnyFreeSpec {
 
     "initial" - {
       val initial = GameState.initial
+
+      "has the correct game status" in {
+        initial.status shouldEqual GameContinues
+      }
 
       "has the initial chessboard state" in {
         initial.board shouldEqual Chessboard.initial

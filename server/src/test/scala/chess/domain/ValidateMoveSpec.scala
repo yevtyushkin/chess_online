@@ -4,7 +4,7 @@ package chess.domain
 import chess.domain.CastlingType._
 import chess.domain.MovePattern._
 import chess.domain.MoveValidationError._
-import chess.domain.MoveValidator.ErrorOr
+import chess.domain.ValidateMove.ErrorOr
 import chess.domain.Side._
 
 import cats.implicits.{catsSyntaxEitherId, catsSyntaxOptionId}
@@ -12,64 +12,49 @@ import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
-class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
+class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
   "MoveValidator" - {
     import TestData._
 
-    val validator = MoveValidator()
+    val validateMove = ValidateMove.apply
 
     "validate" - {
       "returns an error" - {
         "if the piece color is wrong" in {
-          validator
-            .validate(
-              Move(whitePawn, a2, a4),
-              emptyGameState.copy(movesNow = Black)
-            )
-            .left
-            .value shouldEqual WrongPieceColor
+          validateMove(
+            Move(whitePawn, a2, a4),
+            emptyGameState.copy(movesNow = Black)
+          ).left.value shouldEqual WrongPieceColor
         }
 
         "if the piece is not present at starting coordinate" in {
-          validator
-            .validate(
-              Move(whitePawn, a2, a4),
-              emptyGameState
-            )
-            .left
-            .value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
+          validateMove(
+            Move(whitePawn, a2, a4),
+            emptyGameState
+          ).left.value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
         }
 
         "if there's a wrong piece at the starting coordinate" in {
-          validator
-            .validate(
-              Move(whitePawn, a2, a4),
-              emptyGameState.copy(board = Chessboard(Map(a2 -> whiteKing)))
-            )
-            .left
-            .value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
+          validateMove(
+            Move(whitePawn, a2, a4),
+            emptyGameState.copy(board = Chessboard(Map(a2 -> whiteKing)))
+          ).left.value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
         }
 
         "if the starting coordinate is equal to the destination coordinate" in {
-          validator
-            .validate(
-              Move(whitePawn, a2, a2),
-              emptyGameState.copy(board = Chessboard(Map(a2 -> whitePawn)))
-            )
-            .left
-            .value shouldEqual IdenticalStartAndDestinationCoordinates
+          validateMove(
+            Move(whitePawn, a2, a2),
+            emptyGameState.copy(board = Chessboard(Map(a2 -> whitePawn)))
+          ).left.value shouldEqual IdenticalStartAndDestinationCoordinates
         }
 
         "if the destination coordinate is taken by an ally piece" in {
-          validator
-            .validate(
-              Move(whitePawn, a2, a4),
-              emptyGameState.copy(board =
-                Chessboard(Map(a2 -> whitePawn, a4 -> whiteKing))
-              )
+          validateMove(
+            Move(whitePawn, a2, a4),
+            emptyGameState.copy(board =
+              Chessboard(Map(a2 -> whitePawn, a4 -> whiteKing))
             )
-            .left
-            .value shouldEqual DestinationTakenByAllyPiece
+          ).left.value shouldEqual DestinationTakenByAllyPiece
         }
       }
 
@@ -115,12 +100,10 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           "moves 2 squares forward move to an empty square from the starting coordinate with no barriers" in {
             twoSquaresForwardMoves.zip(expectedEnPassantCoordinates).foreach {
               case (move, expectedEnPassantCoordinate) =>
-                validator
-                  .validate(
-                    move,
-                    createStateForPatternValidation(move)
-                  )
-                  .value shouldEqual
+                validateMove(
+                  move,
+                  createStateForPatternValidation(move)
+                ).value shouldEqual
                   Transition(enPassantCoordinateOption =
                     Some(expectedEnPassantCoordinate)
                   )
@@ -145,15 +128,13 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           "en passant attacks" in {
             enPassantAttackMoves.foreach {
               case (move @ Move(_, _, to), expectedAttackedPieceCoordinate) =>
-                validator
-                  .validate(
+                validateMove(
+                  move,
+                  createStateForPatternValidation(
                     move,
-                    createStateForPatternValidation(
-                      move,
-                      enPassantCoordinateOption = to.some
-                    )
+                    enPassantCoordinateOption = to.some
                   )
-                  .value shouldEqual Attack(expectedAttackedPieceCoordinate)
+                ).value shouldEqual Attack(expectedAttackedPieceCoordinate)
             }
           }
         }
@@ -603,14 +584,13 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           additionalPieces: Map[Coordinate, Piece] = Map.empty
       ): Unit = moves.foreach { move =>
-        validator
-          .validate(
+        validateMove(
+          move,
+          createStateForPatternValidation(
             move,
-            createStateForPatternValidation(
-              move,
-              additionalPieces = additionalPieces
-            ).updateCastlings(castlingsAvailable)
-          ) shouldEqual predicate(move)
+            additionalPieces = additionalPieces
+          ).updateCastlings(castlingsAvailable)
+        ) shouldEqual predicate(move)
       }
 
       def createStateForPatternValidation(
@@ -624,92 +604,5 @@ class MoveValidatorSpec extends AnyFreeSpec with EitherValues {
           enPassantCoordinateOption = enPassantCoordinateOption
         )
     }
-
-    //    "validatePattern" - {
-    //      "for kings" - {
-    //
-    //      }
-    //
-    //      // dummy state for testing attacking moves
-    //      val pawnAtA1State = emptyGameState.copy(
-    //        board = Chessboard(
-    //          Map(
-    //            a1 -> whitePawn
-    //          )
-    //        )
-    //      )
-    //
-    //      val barriersGameState = emptyGameState.copy(
-    //        board = Chessboard(
-    //          Map(
-    //            a4 -> whitePawn,
-    //            c3 -> whitePawn,
-    //            d1 -> whitePawn
-    //          )
-    //        )
-    //      )
-    //
-    //
-    //
-    //      "for rooks" - {
-    //
-    //      }
-    //
-    //      "for queens" - {
-    //
-    //      }
-    //
-    //
-    //      }
-    //    }
-    //
-    //    "validate" - {
-    //      val move = Move(whitePawn, a1, a2)
-    //      val pattern = Transition()
-    //      val error = InvalidMovePattern.asLeft
-    //
-    //      def createValidatorStub(
-    //          pieceColorValidationResult: ErrorOr[Move] = move.asRight,
-    //          coordinatesValidationResult: ErrorOr[Move] = move.asRight,
-    //          patternValidationResult: ErrorOr[MovePattern] = pattern.asRight
-    //      ): MoveValidator = new MoveValidator {
-    //        override def validatePieceColor(
-    //            move: Move,
-    //            gameState: GameState
-    //        ): ErrorOr[Move] = pieceColorValidationResult
-    //
-    //        override def validateStartAndDestinationCoordinates(
-    //            move: Move,
-    //            gameState: GameState
-    //        ): ErrorOr[Move] = coordinatesValidationResult
-    //
-    //        override def validatePattern(
-    //            move: Move,
-    //            gameState: GameState
-    //        ): ErrorOr[MovePattern] = patternValidationResult
-    //      }
-    //
-    //      "should return an error if piece color validation fails" in {
-    //        createValidatorStub(pieceColorValidationResult = error)
-    //          .validate(move, emptyGameState) shouldEqual error
-    //      }
-    //
-    //      "should return an error if coordinates validation fails" in {
-    //        createValidatorStub(coordinatesValidationResult = error)
-    //          .validate(move, emptyGameState) shouldEqual error
-    //      }
-    //
-    //      "should return an error if move pattern validation fails" in {
-    //        createValidatorStub(patternValidationResult = error)
-    //          .validate(move, emptyGameState) shouldEqual error
-    //      }
-    //
-    //      "should return the move and the pattern if all validation succeeds" in {
-    //        createValidatorStub()
-    //          .validate(move, emptyGameState)
-    //          .value shouldEqual (move, pattern)
-    //      }
-    //    }
-    //  }
   }
 }
