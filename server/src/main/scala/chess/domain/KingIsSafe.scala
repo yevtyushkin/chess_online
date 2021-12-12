@@ -24,7 +24,7 @@ object KingIsSafe {
           .forall { case (coordinate, piece) =>
             validateMove(
               Move(piece, from = coordinate, to = kingCoordinate),
-              gameState
+              gameState.copy(movesNow = enemySide)
             ).isLeft
           }
       } yield kingIsSafe).getOrElse(true)

@@ -10,29 +10,78 @@ import chess.domain.ValidateMove.ErrorOr
 import chess.domain.PieceType._
 import chess.domain.Side._
 
+import com.chessonline.chess.domain.GameStatus._
+
 trait EvaluateMove {
   def apply(move: Move, gameState: GameState): ErrorOr[GameState]
 }
 
 object EvaluateMove {
-  def apply(validateMove: ValidateMove, kingIsSafe: KingIsSafe): EvaluateMove =
+  def apply(
+      validateMove: ValidateMove,
+      kingIsSafe: KingIsSafe
+  ): EvaluateMove =
     new EvaluateMove {
       override def apply(
           move: Move,
           gameState: GameState
       ): ErrorOr[GameState] = {
         for {
-          pattern <- validateMove(move, gameState)
-          newState = updateState(move, pattern, gameState)
-          _ <- Either.cond(
-            test =
-              kingIsSafe(forSide = gameState.movesNow, gameState = newState),
-            left = KingNotSafeAfterMove,
-            right = newState
-          )
-
-        } yield newState
+          stateAfterMove <- validateAndEvaluate(move, gameState)
+          stateWithUpdatedStatus = updateGameStatus(stateAfterMove)
+        } yield stateWithUpdatedStatus
       }
+
+      private def updateGameStatus(gameState: GameState): GameState = {
+        val side = gameState.movesNow
+        val isKingChecked = !kingIsSafe(forSide = side, gameState)
+        println(isKingChecked)
+
+        // Not performant. TODO: rethink this in future.
+        // Worst (at least real) case of such lookup is ~ 16 pieces * 63 destination squares.
+        val canPerformAtLeastOneMove = gameState.board.pieceMap
+          .exists { case (from, piece) =>
+            piece.side == side && {
+              val destinationCoordinates = for {
+                file <- CoordinateFile.values
+                rank <- CoordinateRank.values
+                if !(from.file == file && from.rank == rank)
+              } yield Coordinate(file, rank)
+
+              destinationCoordinates.exists { destinationCoordinate =>
+                val possibleMove = Move(piece, from, destinationCoordinate)
+
+                validateAndEvaluate(
+                  possibleMove,
+                  gameState
+                ).isRight
+              }
+            }
+          }
+
+        val newStatus =
+          if (canPerformAtLeastOneMove) GameContinues
+          else if (isKingChecked) Win(by = side.opposite)
+          else Draw
+
+        gameState.copy(status = newStatus)
+      }
+
+      private def validateAndEvaluate(
+          move: Move,
+          gameState: GameState
+      ): ErrorOr[GameState] = for {
+        pattern <- validateMove(move, gameState)
+        stateAfterMove = updateState(move, pattern, gameState)
+        _ <- Either.cond(
+          test = kingIsSafe(
+            forSide = gameState.movesNow,
+            gameState = stateAfterMove
+          ),
+          left = KingNotSafeAfterMove,
+          right = stateAfterMove
+        )
+      } yield stateAfterMove
 
       private def updateState(
           move: Move,

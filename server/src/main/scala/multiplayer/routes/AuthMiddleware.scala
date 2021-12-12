@@ -15,23 +15,18 @@ object AuthMiddleware {
   ): org.http4s.server.AuthMiddleware[F, Player] = {
     def authPlayer: Kleisli[OptionT[F, *], Request[F], Player] = Kleisli {
       request =>
-        val playerOpt = for {
-          id <- Sync[F].pure(
-            request.cookies
-              .find(_.name == "id")
-              .flatMap(cookie =>
-                UuidString.fromString(cookie.content).map(PlayerId).toOption
-              )
-          )
-          playerOpt <- players.get.map { players =>
+        for {
+          playerId <- OptionT.fromOption(
             for {
-              id <- id
-              player <- players.get(id)
-            } yield player
-          }
-        } yield playerOpt
-
-        OptionT(playerOpt)
+              idCookie <- request.cookies.find(_.name == "id")
+              playerId <- UuidString
+                .fromString(idCookie.content)
+                .map(PlayerId)
+                .toOption
+            } yield playerId
+          )
+          player <- OptionT(players.get.map(players => players.get(playerId)))
+        } yield player
     }
 
     org.http4s.server.AuthMiddleware.withFallThrough(authPlayer)

@@ -8,6 +8,7 @@ import chess.domain.ValidateMove.ErrorOr
 import chess.domain.Side._
 
 import cats.implicits.catsSyntaxEitherId
+import com.chessonline.chess.domain.GameStatus.{Draw, GameContinues, Win}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.EitherValues
 import org.scalatest.OptionValues.convertOptionToValuable
@@ -18,9 +19,9 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
   "EvaluateMove" - {
     import TestData._
 
-    val evaluateMoveStub = stub[ValidateMove]
+    val validateMoveStub = stub[ValidateMove]
     val kingIsSafeStub = stub[KingIsSafe]
-    val evaluateMove = EvaluateMove(evaluateMoveStub, kingIsSafeStub)
+    val evaluateMove = EvaluateMove(validateMoveStub, kingIsSafeStub)
 
     val defaultMove = Move(whitePawn, a1, a2)
     val defaultError = WrongPieceColor.asLeft
@@ -315,21 +316,77 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
           ) shouldEqual KingNotSafeAfterMove.asLeft
         }
       }
-    }
 
-    def setUpAndEvalMove(
-        move: Move,
-        patternResult: ErrorOr[MovePattern] = transition,
-        isKingSafeAfterMove: Boolean = true,
-        state: GameState = emptyGameState
-    ): ErrorOr[GameState] = {
-      // Mock EvaluateMove.apply returned pattern.
-      evaluateMoveStub.apply _ when (move, state) returns patternResult
+      "updates game status correctly" - {
+        val validateMove = ValidateMove()
+        val pureEvaluateMove =
+          EvaluateMove(validateMove, KingIsSafe(validateMove))
 
-      // Mock whether the king is safe after the evaluated move.
-      kingIsSafeStub.apply _ when (*, *) returns isKingSafeAfterMove
+        "for game continues" in {
+          val move = Move(whitePawn, e2, e4)
+          val state = emptyGameState.copy(
+            board = Chessboard(
+              Map(
+                e1 -> whiteKing,
+                e2 -> whitePawn,
+                e8 -> blackKing
+              )
+            )
+          )
 
-      evaluateMove.apply(move, state)
+          pureEvaluateMove(move, state).value.status shouldEqual GameContinues
+        }
+
+        "for wins" in {
+          val move = Move(whiteQueen, b2, b7)
+          val state = emptyGameState.copy(
+            board = Chessboard(
+              Map(
+                b1 -> whiteRook,
+                b2 -> whiteQueen,
+                a8 -> blackKing
+              )
+            )
+          )
+
+          pureEvaluateMove(move, state).value.status shouldEqual Win(by = White)
+        }
+
+        "for draws" in {
+          val move = Move(blackQueen, b3, b2)
+          val state = emptyGameState.copy(
+            movesNow = Black,
+            board = Chessboard(
+              Map(
+                a8 -> whiteKing,
+                a7 -> whitePawn,
+                b3 -> blackQueen
+              )
+            )
+          )
+
+          pureEvaluateMove(move, state).value.status shouldEqual Draw
+        }
+
+        // rook d1 -> d8
+        "determines whether the mate can be prevented" in {
+          val move = Move(whiteQueen, h1, h8)
+          val state = emptyGameState.copy(
+            board = Chessboard(
+              Map(
+                a8 -> blackKing,
+                a7 -> blackPawn,
+                b7 -> blackPawn,
+                c7 -> blackPawn,
+                d1 -> blackRook,
+                h1 -> whiteQueen
+              )
+            )
+          )
+
+          pureEvaluateMove(move, state).value.status shouldEqual GameContinues
+        }
+      }
     }
 
     def testMoves(
@@ -348,5 +405,20 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
           )
         ) shouldBe true
       }
+
+    def setUpAndEvalMove(
+        move: Move,
+        patternResult: ErrorOr[MovePattern] = transition,
+        isKingSafeAfterMove: Boolean = true,
+        state: GameState = emptyGameState
+    ): ErrorOr[GameState] = {
+      // Mock EvaluateMove.apply returned pattern.
+      validateMoveStub.apply _ when (move, state) returns patternResult
+
+      // Mock whether the king is safe after the evaluated move.
+      kingIsSafeStub.apply _ when (move.piece.side, *) returns isKingSafeAfterMove
+
+      evaluateMove.apply(move, state)
+    }
   }
 }

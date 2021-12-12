@@ -11,5 +11,5 @@ final case class Room(
   def connect(player: Player): Either[String, Room] =
     if (players.contains(player)) this.asRight
     else if (players.size < 2) copy(players = player :: players).asRight
-    else "Lobby is already fulfilled".asLeft
+    else "Room is already fulfilled".asLeft
 }

@@ -1,7 +1,7 @@
 package com.chessonline
 package multiplayer.routes
 
-import multiplayer.Codec._
+import multiplayer.Codecs._
 import multiplayer.domain.{Player, PlayerId, UuidString}
 import multiplayer.events.PlayerManagementEvent.AddPlayer
 

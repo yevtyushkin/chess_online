@@ -9,8 +9,10 @@ object RoomState {
   final case class AwaitingFulfillment(connectedPlayers: List[Player])
       extends RoomState
 
-  final case class AwaitingPlayersReady(playersReady: List[Player])
-      extends RoomState
+  final case class AwaitingPlayersReady(
+      connectedPlayers: List[Player],
+      playersReady: List[Player]
+  ) extends RoomState
 
   final case class GameStarted(
       whiteSidePlayer: Player,

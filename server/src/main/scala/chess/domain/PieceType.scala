@@ -3,15 +3,15 @@ package chess.domain
 
 import enumeratum._
 
-sealed trait PieceType extends EnumEntry
+sealed abstract class PieceType(val tag: String) extends EnumEntry
 
 object PieceType extends Enum[PieceType] {
   val values: IndexedSeq[PieceType] = findValues
 
-  case object King extends PieceType
-  case object Queen extends PieceType
-  case object Rook extends PieceType
-  case object Bishop extends PieceType
-  case object Knight extends PieceType
-  case object Pawn extends PieceType
+  case object King extends PieceType("K")
+  case object Queen extends PieceType("Q")
+  case object Rook extends PieceType("R")
+  case object Bishop extends PieceType("B")
+  case object Knight extends PieceType("N")
+  case object Pawn extends PieceType("P")
 }

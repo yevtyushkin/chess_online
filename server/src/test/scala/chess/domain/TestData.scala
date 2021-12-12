@@ -27,6 +27,7 @@ object TestData {
   val blackKing: Piece = Piece(Black, King)
 
   val whiteQueen: Piece = Piece(White, Queen)
+  val blackQueen: Piece = Piece(Black, Queen)
 
   val whiteRook: Piece = Piece(White, Rook)
   val blackRook: Piece = Piece(Black, Rook)

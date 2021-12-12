@@ -3,8 +3,7 @@ package chess.domain
 
 import enumeratum._
 
-sealed trait Side extends EnumEntry {
-
+sealed abstract class Side(val tag: String) extends EnumEntry {
   import Side._
 
   def opposite: Side = this match {
@@ -16,6 +15,6 @@ sealed trait Side extends EnumEntry {
 object Side extends Enum[Side] {
   val values: IndexedSeq[Side] = findValues
 
-  case object White extends Side
-  case object Black extends Side
+  case object White extends Side("W")
+  case object Black extends Side("B")
 }

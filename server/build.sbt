@@ -24,7 +24,6 @@ addCompilerPlugin(
 
 libraryDependencies ++= Seq(
   "com.beachape" %% "enumeratum" % enumeratumVersion,
-  "com.beachape" %% "enumeratum-circe" % enumeratumVersion,
   "org.typelevel" %% "cats-core" % catsCoreVersion,
   "org.typelevel" %% "cats-effect" % catsEffectVersion,
   "eu.timepit" %% "refined" % refinedVersion,

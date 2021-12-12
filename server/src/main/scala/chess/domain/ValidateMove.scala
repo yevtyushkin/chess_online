@@ -22,7 +22,7 @@ trait ValidateMove {
 object ValidateMove {
   type ErrorOr[A] = Either[MoveValidationError, A]
 
-  def apply: ValidateMove = new ValidateMove {
+  def apply(): ValidateMove = new ValidateMove {
     override def apply(
         move: Move,
         gameState: GameState

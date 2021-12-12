@@ -1,31 +1,34 @@
 package com.chessonline
 package multiplayer.routes
 
+import multiplayer.Codecs._
 import multiplayer.domain._
-import multiplayer.events.RoomManagementEvent
 import multiplayer.events.RoomManagementEvent._
 
+import cats.data.{EitherT, OptionT}
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits.{toFlatMapOps, toFunctorOps, toTraverseOps}
+import com.chessonline.chess.domain._
+import fs2.Pipe
 import fs2.concurrent.Topic
-import io.circe.generic.auto._
-import io.circe.syntax.EncoderOps
-import org.http4s.circe._
+import io.circe.syntax._
+import org.http4s.circe.{jsonEncoderOf, jsonOf}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
-import org.http4s.{AuthedRoutes, EntityDecoder, Response}
+import org.http4s._
 
 object RoomRoutes {
   def of[F[_]: Concurrent]: F[AuthedRoutes[Player, F]] = {
     val dsl = Http4sDsl[F]
-    import multiplayer.Codec._
 
     import dsl._
-    implicit val encodeRoom: EntityDecoder[F, Room] = jsonOf[F, Room]
-    implicit val decodeRoomManagementEvent
-        : EntityDecoder[F, RoomManagementEvent] = jsonOf[F, RoomManagementEvent]
+    implicit val decodeRoom: EntityDecoder[F, Room] = jsonOf[F, Room]
+    implicit val encodeRoomId: EntityEncoder[F, RoomId] =
+      jsonEncoderOf[F, RoomId]
+    implicit val decodeAddRoom: EntityDecoder[F, AddRoom] =
+      jsonOf[F, AddRoom]
 
     for {
       roomManagers <- Ref.of[F, Map[RoomId, RoomManager[F]]](Map.empty)
@@ -36,15 +39,9 @@ object RoomRoutes {
           player: Player
       ): F[Response[F]] =
         for {
-          connectionResult <- roomManager.connect(player)
-          response <- connectionResult match {
-            case Left(errorDescription) => BadRequest(errorDescription)
-            case Right(connection) =>
-              for {
-                _ <- updateAvailableRooms()
-              } yield connection
-          }
-        } yield response
+          connection <- EitherT(roomManager.connect(player))
+            .valueOrF(BadRequest.apply(_))
+        } yield connection
 
       def updateAvailableRooms(): F[Unit] = for {
         rooms <- roomManagers.get
@@ -56,47 +53,57 @@ object RoomRoutes {
 
       AuthedRoutes.of[Player, F] {
         case GET -> Root / "rooms" as _ =>
+          val send: Pipe[F, List[Room], WebSocketFrame] =
+            stream =>
+              stream.map(rooms => WebSocketFrame.Text(rooms.asJson.toString))
+
           for {
             ws <- WebSocketBuilder[F].build(
               send = roomsTopic
                 .subscribe(1)
-                .through(
-                  _.map(rooms => WebSocketFrame.Text(rooms.asJson.toString))
-                ),
+                .through(send),
               receive = _ => fs2.Stream.eval(Concurrent[F].never)
             )
           } yield ws
 
-        case request @ POST -> Root / "rooms" as player =>
-          def onAddRoom(roomName: RoomName): F[Response[F]] = for {
+        case request @ POST -> Root / "rooms" as _ =>
+          for {
+            addRoom <- request.req.as[AddRoom]
+
             id <- UuidString.of[F]
             roomId = RoomId(id)
-            room = Room(roomId, roomName, Nil)
+            room = Room(roomId, addRoom.name, Nil)
 
-            roomManager <- RoomManager.of[F](room)
-            response <- connectToRoom(
-              roomManager,
-              player
+            validateMove = ValidateMove()
+            evaluateMove = EvaluateMove(
+              validateMove,
+              KingIsSafe(validateMove)
             )
+
+            roomManager <- RoomManager.of[F](room, evaluateMove)
+
+            _ <- roomManagers.update(_ + (roomId -> roomManager))
+            _ <- updateAvailableRooms()
+
+            response <- Created(roomId)
           } yield response
 
-          def onConnectRoom(roomId: RoomId): F[Response[F]] =
-            for {
-              roomManagerOpt <- roomManagers.get.map(_.get(roomId))
-              request <- roomManagerOpt match {
-                case Some(roomManager) =>
-                  connectToRoom(roomManager, player)
-                case None => BadRequest("A room with such id does not exist")
-              }
-            } yield request
-
-          for {
-            roomManagementEvent <- request.req.as[RoomManagementEvent]
-            response <- roomManagementEvent match {
-              case AddRoom(roomName)   => onAddRoom(roomName)
-              case ConnectRoom(roomId) => onConnectRoom(roomId)
+        case request @ GET -> Root / "rooms" / "connect" as player =>
+          (for {
+            roomId <- OptionT.fromOption {
+              request.req.headers.headers
+                .collectFirst {
+                  case header if header.name.toString == "room" => header.value
+                }
+                .flatMap(UuidString.fromString(_).toOption)
+                .map(RoomId)
             }
-          } yield response
+            roomManager <- OptionT(
+              roomManagers.get.map(managers => managers.get(roomId))
+            )
+            response <- OptionT.liftF(connectToRoom(roomManager, player))
+          } yield response)
+            .getOrElseF(BadRequest("A room with such id does not exist"))
       }
     }
   }
