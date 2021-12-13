@@ -1,17 +1,20 @@
 package com.chessonline
 package multiplayer.domain
 
-import chess.domain.{EvaluateMove, GameState}
+import chess.domain.Side.White
+import chess.domain.{EvaluateMove, GameState, Move}
+import multiplayer.domain.Error.syntax.ErrorOps
 import multiplayer.domain.RoomState._
 import multiplayer.events.GameEvent
 import multiplayer.events.GameEvent._
 
 import cats.data.EitherT
-import cats.effect.{Concurrent, Sync}
 import cats.effect.concurrent.Ref
-import cats.implicits.{toFlatMapOps, toFunctorOps}
+import cats.effect.{Concurrent, Sync}
+import cats.implicits.{catsSyntaxApplicativeId, toFlatMapOps, toFunctorOps}
+import fs2.Chunk.Queue
 import fs2.Pipe
-import fs2.concurrent.Topic
+import fs2.concurrent.SignallingRef
 import io.circe.parser._
 import io.circe.syntax._
 import org.http4s.Response
@@ -32,8 +35,9 @@ object RoomManager {
       evaluateMove: EvaluateMove
   ): F[RoomManager[F]] = for {
     roomRef <- Ref.of[F, Room](room)
-    roomStateTopic <- Topic[F, RoomState](AwaitingFulfillment(room.players))
-    roomStateRef <- Ref.of[F, RoomState](AwaitingFulfillment(room.players))
+    roomStateRef <- SignallingRef[F, RoomState](
+      AwaitingFulfillment(room.players)
+    )
   } yield new RoomManager[F] {
     override def room: F[Room] = roomRef.get
 
@@ -43,16 +47,21 @@ object RoomManager {
       val reply: Pipe[F, RoomState, WebSocketFrame] = stream =>
         stream.map(state => WebSocketFrame.Text(state.asJson.toString))
 
-      val receive: Pipe[F, WebSocketFrame, Unit] = _.evalMap {
+      def receive(
+          errorQueue: fs2.concurrent.Queue[F, Error]
+      ): Pipe[F, WebSocketFrame, Unit] = _.evalMap {
         case WebSocketFrame.Text(message, _) =>
           (for {
-            gameEvent <- EitherT.fromEither(decode[GameEvent](message))
-            action <- EitherT.right[io.circe.Error](
-              handleGameEvent(gameEvent, player)
-            )
-          } yield action).valueOr(_ => ())
+            gameEvent <- EitherT
+              .fromEither(
+                decode[GameEvent](message).left.map(error =>
+                  Error(error.getMessage)
+                )
+              )
+            action <- handleGameEvent(gameEvent, player)
+          } yield action).valueOrF(errorQueue.enqueue1)
 
-        case _ => Concurrent[F].unit
+        case _ => errorQueue.enqueue1("Unknown message format".toError)
       }
 
       def onPlayerConnect(newRoom: Room): F[Unit] = for {
@@ -67,11 +76,7 @@ object RoomManager {
                 )
               else AwaitingFulfillment(newRoom.players)
 
-            for {
-              _ <- roomRef.set(newRoom)
-              _ <- roomStateRef.set(newState)
-              _ <- roomStateTopic.publish1(newState)
-            } yield ()
+            roomStateRef.set(newState)
 
           case _ => Concurrent[F].unit
         }
@@ -79,60 +84,101 @@ object RoomManager {
 
       (for {
         room <- EitherT.liftF(room)
+        errorQueue <- EitherT.liftF(fs2.concurrent.Queue.bounded[F, Error](5))
         roomWithPlayerAdded <- EitherT.fromEither(room.connect(player))
         websocketConnection <- EitherT.right[String](
           for {
             _ <- onPlayerConnect(roomWithPlayerAdded)
+            _ <- roomRef.set(roomWithPlayerAdded)
 
             response <- WebSocketBuilder[F].build(
-              send = roomStateTopic
-                .subscribe(1)
-                .through(reply),
-              receive = receive
+              send = roomStateRef.discrete
+                .through(reply)
+                .merge(
+                  errorQueue.dequeue
+                    .map(error => WebSocketFrame.Text(error.asJson.toString))
+                ),
+              receive = receive(errorQueue)
             )
           } yield response
         )
       } yield websocketConnection).value
     }
 
-    def handleGameEvent(event: GameEvent, player: Player): F[Unit] = {
-      def startGame(firstPlayer: Player, secondPlayer: Player): F[Unit] = for {
-        firstPlayerPlaysWhiteSide <- Sync[F].delay(new Random().nextBoolean())
-        shuffle =
-          if (firstPlayerPlaysWhiteSide) (firstPlayer, secondPlayer)
-          else (secondPlayer, firstPlayer)
+    def handleGameEvent(
+        event: GameEvent,
+        player: Player
+    ): EitherT[F, Error, Unit] = {
+      def onPlayerReady(
+          state: AwaitingPlayersReady
+      ): EitherT[F, Error, Unit] = {
+        def startGame(
+            firstPlayer: Player,
+            secondPlayer: Player
+        ): EitherT[F, Error, Unit] =
+          for {
+            firstPlayerPlaysWhiteSide <- EitherT.liftF(
+              Sync[F].delay(
+                new Random().nextBoolean()
+              )
+            )
 
-        state = (GameStarted(_, _, GameState.initial)).tupled(shuffle)
+            shuffle =
+              if (firstPlayerPlaysWhiteSide) (firstPlayer, secondPlayer)
+              else (secondPlayer, firstPlayer)
+            state = (GameStarted(_, _, GameState.initial)).tupled(shuffle)
 
-        _ <- roomStateRef.set(state)
-        _ <- roomStateTopic.publish1(state)
-      } yield ()
+            result <- EitherT.right[Error](roomStateRef.set(state))
+          } yield result
+
+        state.playersReady match {
+          case List(opponent) if player != opponent =>
+            startGame(opponent, player)
+          case Nil =>
+            EitherT.right[Error](
+              roomStateRef.set(state.copy(playersReady = List(player)))
+            )
+          case _ => EitherT.left("You are already marked as ready".toError.pure)
+        }
+      }
+
+      def onMoveMade(state: GameStarted, move: Move): EitherT[F, Error, Unit] =
+        for {
+          _ <- EitherT.cond(
+            {
+              val movesNow = state.gameState.movesNow
+              val playerThatMovesNow =
+                if (movesNow == White) state.whiteSidePlayer
+                else state.blackSidePlayer
+
+              playerThatMovesNow == player
+            },
+            (),
+            "Move not in turn".toError
+          )
+
+          gameStateAfterMove <- EitherT.fromEither(
+            evaluateMove(move, state.gameState).left.map(_.toError)
+          )
+          newRoomState = state.copy(gameState = gameStateAfterMove)
+          result <- EitherT.right[Error](
+            roomStateRef.set(newRoomState)
+          )
+        } yield result
 
       for {
-        roomState <- roomStateRef.get
-        action <- (roomState, event) match {
-          case (
-                state @ AwaitingPlayersReady(_, playersReady),
-                PlayerReady
-              ) =>
-            playersReady match {
-              case List(opponent) if player != opponent =>
-                startGame(opponent, player)
-              case Nil =>
-                val newState = state.copy(playersReady = List(player))
-                for {
-                  _ <- roomStateRef.set(newState)
-                  _ <- roomStateTopic.publish1(newState)
-                } yield ()
+        roomState <- EitherT.liftF(roomStateRef.get)
+        result <- (roomState, event) match {
+          case (state: AwaitingPlayersReady, PlayerReady) =>
+            onPlayerReady(state)
 
-              case _ => Concurrent[F].unit
-            }
-
-          case (gameStarted: GameStarted, MoveMade(player))          => ???
-          case (gameStarted: GameStarted, PassPawnSelection(player)) => ???
-          case _                                                     => Concurrent[F].unit
+          case (state: GameStarted, MoveMade(move)) => onMoveMade(state, move)
+          case (_: GameStarted, PassPawnSelection(_)) =>
+            EitherT.left("Needs domain improvements".toError.pure) // TODO
+          case _ =>
+            EitherT.left("Unknown state<->event combination".toError.pure)
         }
-      } yield action
+      } yield result
     }
   }
 }

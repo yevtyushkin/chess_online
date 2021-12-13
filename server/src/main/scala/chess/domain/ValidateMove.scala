@@ -16,7 +16,7 @@ trait ValidateMove {
   def apply(
       move: Move,
       gameState: GameState
-  ): ErrorOr[MovePattern]
+  ): ErrorOr[(Piece, MovePattern)]
 }
 
 object ValidateMove {
@@ -26,33 +26,23 @@ object ValidateMove {
     override def apply(
         move: Move,
         gameState: GameState
-    ): ErrorOr[MovePattern] = for {
-      _ <- validatePieceColor(move, gameState)
-      _ <- validateStartAndDestinationCoordinates(move, gameState)
-      pattern <- validatePattern(move, gameState)
-    } yield pattern
-
-    def validatePieceColor(
-        move: Move,
-        gameState: GameState
-    ): ErrorOr[Move] =
-      Either.cond(
-        test = move.piece.side == gameState.movesNow,
+    ): ErrorOr[(Piece, MovePattern)] = for {
+      piece <- gameState.board
+        .pieceAt(move.from)
+        .toRight(NoPieceAtStartingCoordinate)
+      _ <- Either.cond(
+        test = piece.side == gameState.movesNow,
         right = move,
         left = WrongPieceColor
       )
+      _ <- validateStartAndDestinationCoordinates(move, gameState)
+      pattern <- validatePattern(piece, move, gameState)
+    } yield (piece, pattern)
 
     def validateStartAndDestinationCoordinates(
         move: Move,
         gameState: GameState
-    ): ErrorOr[Move] = {
-      def pieceIsPresentAtStartingCoordinate: ErrorOr[Move] =
-        Either.cond(
-          test = gameState.board.pieceAt(move.from).contains(move.piece),
-          right = move,
-          left = AbsentOrWrongPieceAtStartingCoordinate
-        )
-
+    ): ErrorOr[Unit] = {
       def startAndDestinationCoordinatesDiffer: ErrorOr[Move] =
         Either.cond(
           test = move.from != move.to,
@@ -64,20 +54,22 @@ object ValidateMove {
         Either.cond(
           test = {
             val pieceAtDestination = gameState.board.pieceAt(move.to)
-            !pieceAtDestination.exists(_.side == gameState.movesNow)
+            !pieceAtDestination.exists(piece =>
+              piece.side == gameState.movesNow
+            )
           },
           right = move,
           left = DestinationTakenByAllyPiece
         )
 
       for {
-        _ <- pieceIsPresentAtStartingCoordinate
         _ <- startAndDestinationCoordinatesDiffer
         _ <- destinationNotTakenByAllyPiece
-      } yield move
+      } yield ()
     }
 
     def validatePattern(
+        piece: Piece,
         move: Move,
         gameState: GameState
     ): ErrorOr[MovePattern] = {
@@ -93,7 +85,7 @@ object ValidateMove {
         // Move 2 squares forward for white and for black would have the following patterns respectively: (0, 2) and (0, -2).
         // Since we care only about the pattern, we transform the rank delta taking into account which side performed the move.
         val rankDeltaFromSidePerspective =
-          if (move.piece.side == White) rankDelta
+          if (piece.side == White) rankDelta
           else -rankDelta
 
         (fileDelta, rankDeltaFromSidePerspective) match {
@@ -114,7 +106,7 @@ object ValidateMove {
           case (-1, 1) | (1, 1) if isEnPassantAttack =>
             val toRankIndex = CoordinateRank.indexOf(move.to.rank)
             val attackedPawnRank = CoordinateRank.values(
-              toRankIndex + (if (move.piece.side == White) -1 else 1)
+              toRankIndex + (if (piece.side == White) -1 else 1)
             )
             Attack(move.to.copy(rank = attackedPawnRank)).asRight
 
@@ -129,7 +121,7 @@ object ValidateMove {
             case (-2, 0) => Some(QueenSide)
             case _       => None
           }
-          val kingInitialCoordinate = move.piece.side match {
+          val kingInitialCoordinate = piece.side match {
             case White => Coordinate(E, `1`)
             case Black => Coordinate(E, `8`)
           }
@@ -156,7 +148,7 @@ object ValidateMove {
             if kingPassesCoordinates.forall { coordinate =>
               !underAttack(
                 coordinate,
-                bySide = move.piece.side.opposite,
+                bySide = piece.side.opposite,
                 gameState
               )
             }
@@ -218,12 +210,13 @@ object ValidateMove {
       ): Boolean =
         gameState.board.pieceMap.exists { case (startingCoordinate, piece) =>
           piece.side == bySide && validatePattern(
-            Move(piece, from = startingCoordinate, to = coordinate),
+            piece,
+            Move(from = startingCoordinate, to = coordinate),
             gameState
           ).isRight
         }
 
-      move.piece.pieceType match {
+      piece.pieceType match {
         case Pawn   => validateForPawn
         case King   => validateForKing
         case Rook   => validateForRook

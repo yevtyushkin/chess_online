@@ -15,6 +15,6 @@ sealed abstract class Side(val tag: String) extends EnumEntry {
 object Side extends Enum[Side] {
   val values: IndexedSeq[Side] = findValues
 
-  case object White extends Side("W")
-  case object Black extends Side("B")
+  case object White extends Side("w")
+  case object Black extends Side("b")
 }

@@ -105,3 +105,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Extracted `KingIsSafe`, fixed some class namings.
+
+### ??.12.2021 - 13.12.2021
+
+### Added
+
+- Initial multiplayer functionality.

@@ -21,9 +21,9 @@ object KingIsSafe {
 
         kingIsSafe = pieceMap
           .filter { case (_, piece) => piece.side == enemySide }
-          .forall { case (coordinate, piece) =>
+          .forall { case (coordinate, _) =>
             validateMove(
-              Move(piece, from = coordinate, to = kingCoordinate),
+              Move(from = coordinate, to = kingCoordinate),
               gameState.copy(movesNow = enemySide)
             ).isLeft
           }

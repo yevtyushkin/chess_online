@@ -82,4 +82,6 @@ object Codecs {
       passPawnSelectionDecoder.widen
     ).reduceLeft(_ or _)
   }
+
+  implicit val errorEncoder: Encoder[Error] = deriveEncoder
 }

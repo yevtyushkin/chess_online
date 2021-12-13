@@ -8,25 +8,14 @@ import io.circe.generic.semiauto._
 import io.circe.syntax.EncoderOps
 
 object Codecs {
-  implicit val fileCodec: Codec[CoordinateFile] = Codec.from(
-    decodeA = Decoder.decodeString.emap(tag =>
-      CoordinateFile.values
-        .find(_.tag == tag)
-        .toRight("Invalid coordinate file")
+  implicit val coordinateCodec: Codec[Coordinate] = Codec.from(
+    decodeA = Decoder.decodeString.emap(
+      Coordinate.fromString(_).toRight("Invalid coordinate")
     ),
-    encodeA = Encoder.encodeString.contramap(_.tag)
+    encodeA = Encoder.encodeString.contramap(coordinate =>
+      s"${coordinate.file.tag}${coordinate.rank.tag}"
+    )
   )
-
-  implicit val rankCodec: Codec[CoordinateRank] = Codec.from(
-    decodeA = Decoder.decodeString.emap(tag =>
-      CoordinateRank.values
-        .find(_.tag == tag)
-        .toRight("Invalid coordinate rank")
-    ),
-    encodeA = Encoder.encodeString.contramap(_.tag)
-  )
-
-  implicit val coordinateCodec: Codec[Coordinate] = deriveCodec
 
   implicit val sideCodec: Codec[Side] = Codec.from(
     decodeA = Decoder.decodeString.emap(s =>
@@ -46,14 +35,8 @@ object Codecs {
 
   implicit val pieceCodec: Codec[Piece] = deriveCodec
 
-  implicit val chessboardEncoder: Encoder[Chessboard] = {
-    type PieceAtCoordinate = (Coordinate, Piece)
-
-    implicit val pieceAtCoordinateEncoder: Encoder[PieceAtCoordinate] =
-      Encoder.forProduct2("coordinate", "piece")(identity)
-
-    Encoder.encodeList[PieceAtCoordinate].contramap(_.pieceMap.toList)
-  }
+  implicit val chessboardEncoder: Encoder[Chessboard] =
+    Encoder.encodeString.contramap(_.toFEN)
 
   implicit val gameStatusEncoder: Encoder[GameStatus] = Encoder.instance {
     status =>

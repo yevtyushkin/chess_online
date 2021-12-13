@@ -2,7 +2,6 @@ package com.chessonline
 package chess.domain
 
 final case class Move(
-    piece: Piece,
     from: Coordinate,
     to: Coordinate
 ) {

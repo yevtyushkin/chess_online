@@ -10,10 +10,10 @@ class MoveSpec extends AnyFreeSpec {
 
     "as2DVector" - {
       "should return correct vector representation" in {
-        Move(whitePawn, a1, a2).as2DVector shouldEqual (0, 1)
-        Move(whitePawn, a1, b1).as2DVector shouldEqual (1, 0)
-        Move(whitePawn, a1, a1).as2DVector shouldEqual (0, 0)
-        Move(whitePawn, a1, b2).as2DVector shouldEqual (1, 1)
+        Move(a1, a2).as2DVector shouldEqual (0, 1)
+        Move(a1, b1).as2DVector shouldEqual (1, 0)
+        Move(a1, a1).as2DVector shouldEqual (0, 0)
+        Move(a1, b2).as2DVector shouldEqual (1, 1)
       }
     }
   }

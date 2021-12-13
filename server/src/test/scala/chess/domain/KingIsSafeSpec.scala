@@ -17,10 +17,13 @@ class KingIsSafeSpec extends AnyFreeSpec with MockFactory {
     val validateMove = stub[ValidateMove]
     val kingIsSafe = KingIsSafe(validateMove)
 
+    val kingCoordinate = a1
     val state = emptyGameState.copy(
-      board = Chessboard(Map(a1 -> whiteKing, a8 -> blackPawn, b7 -> blackPawn))
+      board = Chessboard(
+        Map(kingCoordinate -> whiteKing, a8 -> blackPawn, b7 -> blackPawn)
+      )
     )
-    val defaultMove = Move(blackPawn, a8, a1)
+    val defaultPiece = whitePawn
 
     "apply" - {
       "returns true" - {
@@ -34,7 +37,7 @@ class KingIsSafeSpec extends AnyFreeSpec with MockFactory {
 
         "if the king can't be attacked by any enemy piece" in {
           validateMove.apply _ when where { (move, _) =>
-            move.piece.side == state.movesNow.opposite
+            move.to == kingCoordinate
           } returns InvalidMovePattern.asLeft
 
           kingIsSafe(
@@ -47,8 +50,8 @@ class KingIsSafeSpec extends AnyFreeSpec with MockFactory {
       "returns false" - {
         "if the king can be attacked by an enemy piece" in {
           validateMove.apply _ when where { (move, _) =>
-            move.piece.side == state.movesNow.opposite
-          } returns Transition().asRight
+            move.to == kingCoordinate
+          } returns (defaultPiece, Transition()).asRight
 
           kingIsSafe(
             forSide = White,

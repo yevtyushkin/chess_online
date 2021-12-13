@@ -44,4 +44,7 @@ object TestUtils {
         )
       )
     )
+
+  def nPieces(n: Int, piece: Piece): Seq[Piece] = Seq.fill(n)(piece)
+
 }

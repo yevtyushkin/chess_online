@@ -16,6 +16,8 @@ class ChessboardSpec extends AnyFreeSpec {
   import TestData._
 
   "Chessboard" - {
+    val initial = Chessboard.initial
+
     "pieceAt" - {
       val piece = TestUtils.createPiece()
       val chessboard = Chessboard(Map(a1 -> piece))
@@ -29,9 +31,30 @@ class ChessboardSpec extends AnyFreeSpec {
       }
     }
 
-    "initial" - {
-      val initial = Chessboard.initial
+    "toFEN" - {
+      "should convert the chessboard to FEN correctly" in {
+        initial.toFEN shouldEqual "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
+        val `afterE2->E4` = initial
+          .copy(pieceMap = initial.pieceMap - e2 + (e4 -> whitePawn))
+        `afterE2->E4`.toFEN shouldEqual "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"
+
+        val `afterE2->E4,C7->C5` =
+          `afterE2->E4`.copy(pieceMap =
+            `afterE2->E4`.pieceMap - c7 + (c5 -> blackPawn)
+          )
+        `afterE2->E4,C7->C5`.toFEN shouldEqual "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR"
+
+        val `afterE2->E4,C7->C5,G1->F3` = `afterE2->E4,C7->C5`.copy(pieceMap =
+          `afterE2->E4,C7->C5`.pieceMap - g1 + (f3 -> whiteKnight)
+        )
+        `afterE2->E4,C7->C5,G1->F3`.toFEN shouldEqual "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R"
+
+        Chessboard(Map.empty).toFEN shouldEqual "8/8/8/8/8/8/8/8"
+      }
+    }
+
+    "initial" - {
       "should contain 32 pieces" in {
         initial.pieceMap should have size 32
       }

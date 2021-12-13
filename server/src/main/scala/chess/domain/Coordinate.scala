@@ -10,6 +10,14 @@ final case class Coordinate(
 }
 
 object Coordinate {
+  def fromString(s: String): Option[Coordinate] = s.toList match {
+    case file :: rank :: Nil =>
+      for {
+        file <- CoordinateFile.values.find(_.tag == file.toString)
+        rank <- CoordinateRank.values.find(_.tag == rank.toString)
+      } yield Coordinate(file, rank)
+    case _ => None
+  }
 
   /** Handles only vertical, horizontal and diagonal patterns. */
   def allBetween(from: Coordinate, to: Coordinate): Seq[Coordinate] = {

@@ -15,42 +15,39 @@ import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
   "MoveValidator" - {
     import TestData._
+    import TestUtils._
 
-    val validateMove = ValidateMove.apply
+    val validateMove = ValidateMove.apply()
 
     "validate" - {
       "returns an error" - {
         "if the piece color is wrong" in {
           validateMove(
-            Move(whitePawn, a2, a4),
-            emptyGameState.copy(movesNow = Black)
+            Move(a2, a4),
+            emptyGameState.copy(
+              movesNow = Black,
+              board = Chessboard(Map(a2 -> whitePawn))
+            )
           ).left.value shouldEqual WrongPieceColor
         }
 
         "if the piece is not present at starting coordinate" in {
           validateMove(
-            Move(whitePawn, a2, a4),
+            Move(a2, a4),
             emptyGameState
-          ).left.value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
-        }
-
-        "if there's a wrong piece at the starting coordinate" in {
-          validateMove(
-            Move(whitePawn, a2, a4),
-            emptyGameState.copy(board = Chessboard(Map(a2 -> whiteKing)))
-          ).left.value shouldEqual AbsentOrWrongPieceAtStartingCoordinate
+          ).left.value shouldEqual NoPieceAtStartingCoordinate
         }
 
         "if the starting coordinate is equal to the destination coordinate" in {
           validateMove(
-            Move(whitePawn, a2, a2),
+            Move(a2, a2),
             emptyGameState.copy(board = Chessboard(Map(a2 -> whitePawn)))
           ).left.value shouldEqual IdenticalStartAndDestinationCoordinates
         }
 
         "if the destination coordinate is taken by an ally piece" in {
           validateMove(
-            Move(whitePawn, a2, a4),
+            Move(a2, a4),
             emptyGameState.copy(board =
               Chessboard(Map(a2 -> whitePawn, a4 -> whiteKing))
             )
@@ -60,10 +57,10 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
       "for pawn moves" - {
         val attackingMoves = List(
-          Move(whitePawn, from = e4, to = d5),
-          Move(whitePawn, from = e4, to = f5),
-          Move(blackPawn, from = e5, to = d4),
-          Move(blackPawn, from = e5, to = f4)
+          Move(from = e4, to = d5),
+          Move(from = e4, to = f5),
+          Move(from = e5, to = d4),
+          Move(from = e5, to = f4)
         )
 
         // Move -> en passant square coordinate
@@ -78,13 +75,13 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
           )
 
         val oneSquareForwardMoves = List(
-          Move(whitePawn, from = e2, to = e3),
-          Move(blackPawn, from = e7, to = e6)
+          Move(from = e2, to = e3),
+          Move(from = e7, to = e6)
         )
 
         val twoSquaresForwardMoves = List(
-          Move(whitePawn, from = e2, to = e4),
-          Move(blackPawn, from = e7, to = e5)
+          Move(from = e2, to = e4),
+          Move(from = e7, to = e5)
         )
 
         val expectedEnPassantCoordinates = List(e3, e6)
@@ -92,22 +89,26 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "allows" - {
           "moves 1 square forward to an empty square" in {
             testValidPattern(
+              pieces = List(whitePawn, blackPawn),
               moves = oneSquareForwardMoves,
               expected = Transition()
             )
           }
 
           "moves 2 squares forward move to an empty square from the starting coordinate with no barriers" in {
-            twoSquaresForwardMoves.zip(expectedEnPassantCoordinates).foreach {
-              case (move, expectedEnPassantCoordinate) =>
+            twoSquaresForwardMoves
+              .zip(expectedEnPassantCoordinates)
+              .zip(List(whitePawn, blackPawn))
+              .foreach { case ((move, expectedEnPassantCoordinate), pawn) =>
                 validateMove(
                   move,
-                  createStateForPatternValidation(move)
+                  createStateForPatternValidation(pawn, move)
                 ).value shouldEqual
+                  (pawn,
                   Transition(enPassantCoordinateOption =
                     Some(expectedEnPassantCoordinate)
-                  )
-            }
+                  ))
+              }
           }
 
           "regular attacks" in {
@@ -119,34 +120,44 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
             )
 
             testByPredicate(
+              pieces = List(whitePawn, whitePawn, blackPawn, blackPawn),
               attackingMoves,
-              move => Attack(move.to).asRight,
+              (piece, move) => (piece, Attack(move.to)).asRight,
               additionalPieces = enemyPieces
             )
           }
 
           "en passant attacks" in {
-            enPassantAttackMoves.foreach {
-              case (move @ Move(_, _, to), expectedAttackedPieceCoordinate) =>
-                validateMove(
-                  move,
-                  createStateForPatternValidation(
+            enPassantAttackMoves
+              .zip(List(whitePawn, whitePawn, blackPawn, blackPawn))
+              .foreach {
+                case (
+                      (move @ Move(_, to), expectedAttackedPieceCoordinate),
+                      pawn
+                    ) =>
+                  validateMove(
                     move,
-                    enPassantCoordinateOption = to.some
-                  )
-                ).value shouldEqual Attack(expectedAttackedPieceCoordinate)
-            }
+                    createStateForPatternValidation(
+                      pawn,
+                      move,
+                      enPassantCoordinateOption = to.some
+                    )
+                  ).value shouldEqual (pawn, Attack(
+                    expectedAttackedPieceCoordinate
+                  ))
+              }
           }
         }
 
         "does not allow" - {
           "moves forward to non-empty square" in {
             val invalidMoves = List(
-              Move(whitePawn, from = e2, to = e3),
-              Move(blackPawn, from = e7, to = e5)
+              Move(from = e2, to = e3),
+              Move(from = e7, to = e5)
             )
 
             testInvalidPattern(
+              pieces = List(whitePawn, blackPawn),
               moves = invalidMoves,
               additionalPieces = Map(e3 -> blackKing, e5 -> whiteKing)
             )
@@ -154,6 +165,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "moves 2 squares forward with barriers" in {
             testInvalidPattern(
+              pieces = nPieces(twoSquaresForwardMoves.length, whitePawn),
               moves = twoSquaresForwardMoves,
               additionalPieces = Map(
                 e3 -> blackKing,
@@ -164,28 +176,42 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "moves 2 squares forward from non-starting position" in {
             val invalidMoves = List(
-              Move(whitePawn, from = e3, to = e5),
-              Move(blackPawn, from = e6, to = e4)
+              Move(from = e3, to = e5),
+              Move(from = e6, to = e4)
             )
 
-            testInvalidPattern(invalidMoves)
+            testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whitePawn),
+              invalidMoves
+            )
           }
 
           "empty square attacks" in {
-            testInvalidPattern(attackingMoves)
+            testInvalidPattern(
+              pieces = nPieces(attackingMoves.length, whitePawn),
+              attackingMoves
+            )
           }
 
           "moves in the wrong direction" in {
             val invalidMoves = List(
-              Move(whitePawn, b2, b1),
-              Move(whitePawn, b2, a1),
-              Move(whitePawn, b2, c1),
-              Move(blackPawn, b7, b8),
-              Move(blackPawn, b7, a8),
-              Move(blackPawn, b7, c8)
+              Move(b2, b1),
+              Move(b2, a1),
+              Move(b2, c1),
+              Move(b7, b8),
+              Move(b7, a8),
+              Move(b7, c8)
             )
 
             testInvalidPattern(
+              pieces = List(
+                whitePawn,
+                whitePawn,
+                whitePawn,
+                blackPawn,
+                blackPawn,
+                blackPawn
+              ),
               invalidMoves,
               // to make sure that attacks in wrong direction are impossible too
               additionalPieces = Map(
@@ -201,29 +227,30 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
       "for king moves" - {
         val kingMoves = List(
-          Move(whiteKing, e3, e4), // forward
-          Move(whiteKing, e3, e2), // back
-          Move(whiteKing, e3, d3), // left
-          Move(whiteKing, e3, f3), // right
-          Move(whiteKing, e3, d4), // left-forward
-          Move(whiteKing, e3, f4), // right-forward
-          Move(whiteKing, e3, d3), // left-back
-          Move(whiteKing, e3, f3) // right-back
+          Move(e3, e4), // forward
+          Move(e3, e2), // back
+          Move(e3, d3), // left
+          Move(e3, f3), // right
+          Move(e3, d4), // left-forward
+          Move(e3, f4), // right-forward
+          Move(e3, d3), // left-back
+          Move(e3, f3) // right-back
         )
 
         val queenSideCastlings = List(
-          Move(whiteKing, e1, c1),
-          Move(blackKing, e8, c8)
+          Move(e1, c1),
+          Move(e8, c8)
         )
 
         val kingSideCastlings = List(
-          Move(whiteKing, e1, g1),
-          Move(blackKing, e8, g8)
+          Move(e1, g1),
+          Move(e8, g8)
         )
 
         "allows" - {
           "moves by 1 square to an empty square" in {
             testValidPattern(
+              pieces = nPieces(kingMoves.length, whiteKing),
               moves = kingMoves,
               expected = Transition()
             )
@@ -231,8 +258,9 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "regular attacks" in {
             testByPredicate(
+              pieces = nPieces(kingMoves.length, whiteKing),
               kingMoves,
-              move => Attack(move.to).asRight,
+              (piece, move) => (piece, Attack(move.to)).asRight,
               additionalPieces =
                 kingMoves.map(move => move.to -> blackPawn).toMap
             )
@@ -240,11 +268,13 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "castlings if available" in {
             testValidPattern(
+              pieces = List(whiteKing, blackKing),
               moves = queenSideCastlings,
               expected = Castling(QueenSide)
             )
 
             testValidPattern(
+              pieces = List(whiteKing, blackKing),
               moves = kingSideCastlings,
               expected = Castling(KingSide)
             )
@@ -254,15 +284,19 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "does not allow" - {
           "moves for more that 1 square" in {
             val invalidMoves = List(
-              Move(whiteKing, a1, a3),
-              Move(whiteKing, a1, b3)
+              Move(a1, a3),
+              Move(a1, a4)
             )
 
-            testInvalidPattern(moves = invalidMoves)
+            testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteKing),
+              moves = invalidMoves
+            )
           }
 
           "castlings if not available" in {
             testInvalidPattern(
+              pieces = List(whiteKing, blackKing, whiteKing, blackKing),
               moves = queenSideCastlings ::: kingSideCastlings,
               castlingsAvailable = Nil
             )
@@ -270,6 +304,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "castlings if there are barriers" in {
             testInvalidPattern(
+              pieces = List(whiteKing, blackKing, whiteKing, blackKing),
               moves = queenSideCastlings ::: kingSideCastlings,
               additionalPieces = Map(
                 b1 -> whitePawn,
@@ -282,6 +317,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "castlings if the king passes attacked squares" in {
             testInvalidPattern(
+              pieces = List(whiteKing, blackKing, whiteKing, blackKing),
               moves = queenSideCastlings ::: kingSideCastlings,
               additionalPieces = Map(
                 d5 -> whiteRook,
@@ -294,6 +330,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "castlings if the king is under attack before castling" in {
             testInvalidPattern(
+              pieces = List(whiteKing, blackKing, whiteKing, blackKing),
               moves = queenSideCastlings ::: kingSideCastlings,
               additionalPieces = Map(
                 e5 -> whiteRook,
@@ -304,6 +341,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "castlings if the king is under attack after the castling" in {
             testInvalidPattern(
+              pieces = List(whiteKing, blackKing, whiteKing, blackKing),
               moves = queenSideCastlings ::: kingSideCastlings,
               additionalPieces = Map(
                 c3 -> blackRook,
@@ -318,13 +356,14 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
       "for bishop moves" - {
         val moves = List(
-          Move(whiteBishop, a1, h8),
-          Move(blackBishop, h1, a8)
+          Move(a1, h8),
+          Move(h1, a8)
         )
 
         "allows" - {
           "diagonal moves" in {
             testValidPattern(
+              pieces = nPieces(moves.length, whiteBishop),
               moves = moves,
               expected = Transition()
             )
@@ -332,8 +371,9 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "regular attacks" in {
             testByPredicate(
+              pieces = nPieces(moves.length, whiteBishop),
               moves,
-              move => Attack(move.to).asRight,
+              (piece, move) => (piece, Attack(move.to)).asRight,
               additionalPieces = Map(h8 -> blackPawn, a8 -> blackPawn)
             )
           }
@@ -342,6 +382,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "does not allow" - {
           "moves with barriers" in {
             testInvalidPattern(
+              pieces = nPieces(moves.length, whiteBishop),
               moves,
               additionalPieces = Map(b2 -> whitePawn, b7 -> whitePawn)
             )
@@ -349,13 +390,16 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "moves of invalid patterns" in {
             val invalidMoves = List(
-              Move(whiteBishop, a1, a8),
-              Move(whiteBishop, a1, h1),
-              Move(whiteBishop, a1, b3),
-              Move(whiteBishop, a2, h1)
+              Move(a1, a8),
+              Move(a1, h1),
+              Move(a1, b3),
+              Move(a2, h1)
             )
 
-            testInvalidPattern(invalidMoves)
+            testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteBishop),
+              invalidMoves
+            )
           }
         }
       }
@@ -364,11 +408,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "allows" - {
           "vertical moves" in {
             val moves = List(
-              Move(whiteRook, a1, a8),
-              Move(whiteRook, a8, a1)
+              Move(a1, a8),
+              Move(a8, a1)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteRook),
               moves = moves,
               expected = Transition()
             )
@@ -376,11 +421,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "horizontal moves" in {
             val moves = List(
-              Move(whiteRook, a1, h1),
-              Move(whiteRook, h1, a1)
+              Move(a1, h1),
+              Move(h1, a1)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteRook),
               moves = moves,
               expected = Transition()
             )
@@ -388,11 +434,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "regular attacks" in {
             val moves = List(
-              Move(whiteRook, a8, a1),
-              Move(whiteRook, h1, a1)
+              Move(a8, a1),
+              Move(h1, a1)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteRook),
               moves = moves,
               additionalPieces = Map(a1 -> blackPawn),
               expected = Attack(a1)
@@ -403,11 +450,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "does not allow" - {
           "moves with barriers" in {
             val invalidMoves = List(
-              Move(whiteRook, a1, a8),
-              Move(whiteRook, a1, h1)
+              Move(a1, a8),
+              Move(a1, h1)
             )
 
             testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteRook),
               moves = invalidMoves,
               additionalPieces = Map(a2 -> whitePawn, b1 -> whitePawn)
             )
@@ -415,12 +463,15 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "moves of invalid patterns" in {
             val invalidMoves = List(
-              Move(whiteRook, a1, h8),
-              Move(whiteRook, a1, b3),
-              Move(whiteRook, a2, h1)
+              Move(a1, h8),
+              Move(a1, b3),
+              Move(a2, h1)
             )
 
-            testInvalidPattern(invalidMoves)
+            testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteRook),
+              invalidMoves
+            )
           }
         }
       }
@@ -429,11 +480,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "allows" - {
           "vertical moves" in {
             val moves = List(
-              Move(whiteQueen, b1, b8),
-              Move(whiteQueen, c8, c1)
+              Move(b1, b8),
+              Move(c8, c1)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteQueen),
               moves = moves,
               expected = Transition()
             )
@@ -441,11 +493,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "horizontal moves" in {
             val moves = List(
-              Move(whiteQueen, b1, h1),
-              Move(whiteQueen, h8, a8)
+              Move(b1, h1),
+              Move(h8, a8)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteQueen),
               moves = moves,
               expected = Transition()
             )
@@ -453,11 +506,12 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "diagonal moves" in {
             val moves = List(
-              Move(whiteQueen, a1, h8),
-              Move(whiteQueen, h1, a8)
+              Move(a1, h8),
+              Move(h1, a8)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteQueen),
               moves = moves,
               expected = Transition()
             )
@@ -465,12 +519,13 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "regular attacks" in {
             val moves = List(
-              Move(whiteQueen, a8, a1),
-              Move(whiteQueen, h1, a1),
-              Move(whiteQueen, h8, a1)
+              Move(a8, a1),
+              Move(h1, a1),
+              Move(h8, a1)
             )
 
             testValidPattern(
+              pieces = nPieces(moves.length, whiteQueen),
               moves = moves,
               additionalPieces = Map(a1 -> blackPawn),
               expected = Attack(a1)
@@ -481,12 +536,13 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
         "does not allow" - {
           "moves with barriers" in {
             val invalidMoves = List(
-              Move(whiteQueen, a1, a8),
-              Move(whiteQueen, a1, h8),
-              Move(whiteQueen, a1, h1)
+              Move(a1, a8),
+              Move(a1, h8),
+              Move(a1, h1)
             )
 
             testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteQueen),
               moves = invalidMoves,
               additionalPieces = Map(
                 a2 -> whitePawn,
@@ -498,11 +554,14 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
           "moves of invalid patterns" in {
             val invalidMoves = List(
-              Move(whiteQueen, a1, b3),
-              Move(whiteQueen, a2, h1)
+              Move(a1, b3),
+              Move(a2, h1)
             )
 
-            testInvalidPattern(moves = invalidMoves)
+            testInvalidPattern(
+              pieces = nPieces(invalidMoves.length, whiteQueen),
+              moves = invalidMoves
+            )
           }
         }
       }
@@ -510,15 +569,16 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
       "for knight moves" - {
         "for knights" - {
           val moves = List(
-            Move(whiteKnight, e4, f6),
-            Move(whiteKnight, e4, g3),
-            Move(whiteKnight, e4, d2),
-            Move(whiteKnight, e4, c5)
+            Move(e4, f6),
+            Move(e4, g3),
+            Move(e4, d2),
+            Move(e4, c5)
           )
 
           "allows" - {
             "regular moves" in {
               testValidPattern(
+                pieces = nPieces(moves.length, whiteKnight),
                 moves = moves,
                 expected = Transition()
               )
@@ -526,8 +586,9 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
 
             "regular attacks" in {
               testByPredicate(
+                pieces = nPieces(moves.length, whiteKnight),
                 moves,
-                move => Attack(move.to).asRight,
+                (piece, move) => (piece, Attack(move.to)).asRight,
                 additionalPieces = Map(
                   f6 -> blackPawn,
                   g3 -> blackPawn,
@@ -541,66 +602,76 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
           "does not allow" - {
             "moves of invalid patterns" in {
               val invalidMoves = List(
-                Move(whiteKnight, a1, a2),
-                Move(whiteKnight, a1, b1),
-                Move(whiteKnight, a1, h8),
-                Move(whiteKnight, a1, a8),
-                Move(whiteKnight, a1, h1),
-                Move(whiteKnight, a1, h7)
+                Move(a1, a2),
+                Move(a1, b1),
+                Move(a1, h8),
+                Move(a1, a8),
+                Move(a1, h1),
+                Move(a1, h7)
               )
 
-              testInvalidPattern(invalidMoves)
+              testInvalidPattern(
+                pieces = nPieces(invalidMoves.length, whiteKnight),
+                invalidMoves
+              )
             }
           }
         }
       }
 
       def testValidPattern(
+          pieces: Seq[Piece],
           moves: Seq[Move],
           additionalPieces: Map[Coordinate, Piece] = Map.empty,
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           expected: MovePattern
       ): Unit = testByPredicate(
+        pieces,
         moves,
-        _ => expected.asRight,
+        (piece, _) => (piece, expected).asRight,
         castlingsAvailable,
         additionalPieces
       )
 
       def testInvalidPattern(
+          pieces: Seq[Piece],
           moves: Seq[Move],
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           additionalPieces: Map[Coordinate, Piece] = Map.empty
       ): Unit = testByPredicate(
+        pieces,
         moves,
-        _ => InvalidMovePattern.asLeft,
+        (_, _) => InvalidMovePattern.asLeft,
         castlingsAvailable,
         additionalPieces
       )
 
       def testByPredicate(
+          pieces: Seq[Piece],
           moves: Seq[Move],
-          predicate: Move => ErrorOr[MovePattern],
+          predicate: (Piece, Move) => ErrorOr[(Piece, MovePattern)],
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           additionalPieces: Map[Coordinate, Piece] = Map.empty
-      ): Unit = moves.foreach { move =>
+      ): Unit = moves.zip(pieces).foreach { case (move, piece) =>
         validateMove(
           move,
           createStateForPatternValidation(
+            piece,
             move,
             additionalPieces = additionalPieces
           ).updateCastlings(castlingsAvailable)
-        ) shouldEqual predicate(move)
+        ) shouldEqual predicate(piece, move)
       }
 
       def createStateForPatternValidation(
+          piece: Piece,
           move: Move,
           additionalPieces: Map[Coordinate, Piece] = Map.empty,
           enPassantCoordinateOption: Option[Coordinate] = None
       ): GameState =
         emptyGameState.copy(
-          movesNow = move.piece.side,
-          board = Chessboard(Map(move.from -> move.piece) ++ additionalPieces),
+          movesNow = piece.side,
+          board = Chessboard(Map(move.from -> piece) ++ additionalPieces),
           enPassantCoordinateOption = enPassantCoordinateOption
         )
     }

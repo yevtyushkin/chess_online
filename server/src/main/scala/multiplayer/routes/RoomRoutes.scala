@@ -1,6 +1,7 @@
 package com.chessonline
 package multiplayer.routes
 
+import chess.domain._
 import multiplayer.Codecs._
 import multiplayer.domain._
 import multiplayer.events.RoomManagementEvent._
@@ -9,15 +10,14 @@ import cats.data.{EitherT, OptionT}
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
 import cats.implicits.{toFlatMapOps, toFunctorOps, toTraverseOps}
-import com.chessonline.chess.domain._
 import fs2.Pipe
 import fs2.concurrent.Topic
 import io.circe.syntax._
+import org.http4s._
 import org.http4s.circe.{jsonEncoderOf, jsonOf}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
-import org.http4s._
 
 object RoomRoutes {
   def of[F[_]: Concurrent]: F[AuthedRoutes[Player, F]] = {
@@ -48,7 +48,9 @@ object RoomRoutes {
           .map(_.values.map(_.room).toList.sequence)
           .flatten
 
-        _ <- roomsTopic.publish1(rooms)
+        availableRooms = rooms.filter(_.players.size < 2)
+
+        _ <- roomsTopic.publish1(availableRooms)
       } yield ()
 
       AuthedRoutes.of[Player, F] {

@@ -4,13 +4,12 @@ package chess.domain
 import chess.domain.CastlingType._
 import chess.domain.CoordinateFile._
 import chess.domain.CoordinateRank._
+import chess.domain.GameStatus._
 import chess.domain.MovePattern._
 import chess.domain.MoveValidationError.KingNotSafeAfterMove
-import chess.domain.ValidateMove.ErrorOr
 import chess.domain.PieceType._
 import chess.domain.Side._
-
-import com.chessonline.chess.domain.GameStatus._
+import chess.domain.ValidateMove.ErrorOr
 
 trait EvaluateMove {
   def apply(move: Move, gameState: GameState): ErrorOr[GameState]
@@ -35,7 +34,6 @@ object EvaluateMove {
       private def updateGameStatus(gameState: GameState): GameState = {
         val side = gameState.movesNow
         val isKingChecked = !kingIsSafe(forSide = side, gameState)
-        println(isKingChecked)
 
         // Not performant. TODO: rethink this in future.
         // Worst (at least real) case of such lookup is ~ 16 pieces * 63 destination squares.
@@ -49,7 +47,7 @@ object EvaluateMove {
               } yield Coordinate(file, rank)
 
               destinationCoordinates.exists { destinationCoordinate =>
-                val possibleMove = Move(piece, from, destinationCoordinate)
+                val possibleMove = Move(from, destinationCoordinate)
 
                 validateAndEvaluate(
                   possibleMove,
@@ -71,8 +69,10 @@ object EvaluateMove {
           move: Move,
           gameState: GameState
       ): ErrorOr[GameState] = for {
-        pattern <- validateMove(move, gameState)
-        stateAfterMove = updateState(move, pattern, gameState)
+        pieceAndPattern <- validateMove(move, gameState)
+        (piece, pattern) = pieceAndPattern
+
+        stateAfterMove = updateState(move, piece, pattern, gameState)
         _ <- Either.cond(
           test = kingIsSafe(
             forSide = gameState.movesNow,
@@ -85,11 +85,12 @@ object EvaluateMove {
 
       private def updateState(
           move: Move,
+          piece: Piece,
           movePattern: MovePattern,
           gameState: GameState
       ): GameState = {
         val newCastlings =
-          move.piece.pieceType match {
+          piece.pieceType match {
             case King => Nil
             case Rook =>
               val isFirstRooksMove =
@@ -113,7 +114,7 @@ object EvaluateMove {
             .copy(movesNow = movesNext, enPassantCoordinateOption = None)
 
         val updatedSquares =
-          gameState.board.pieceMap - move.from + (move.to -> move.piece)
+          gameState.board.pieceMap - move.from + (move.to -> piece)
         movePattern match {
           case Transition(enPassantCoordinateOption) =>
             updatedState.copy(
