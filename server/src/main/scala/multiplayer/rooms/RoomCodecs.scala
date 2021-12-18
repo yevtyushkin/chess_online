@@ -18,7 +18,7 @@ import chess.Codecs._
 object RoomCodecs {
   implicit val roomIdCodec: Codec[RoomId] = Codec.from(
     encodeA = uuidStringCodec.contramap(_.value),
-    decodeA = uuidStringCodec.map(RoomId)
+    decodeA = uuidStringCodec.map(RoomId.apply)
   )
 
   implicit val roomNameCodec: Codec[RoomName] = Codec.from(
