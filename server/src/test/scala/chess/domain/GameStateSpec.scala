@@ -4,6 +4,7 @@ package chess.domain
 import chess.domain.CastlingType._
 import chess.domain.GameStatus.GameContinues
 import chess.domain.Side._
+import chess.domain.TestData.a1
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
@@ -42,6 +43,55 @@ class GameStateSpec extends AnyFreeSpec {
           .copy(movesNow = Black)
           .updateCastlings(castlingsForBlack)
           .castlingsForBlack shouldEqual castlingsForBlack
+      }
+    }
+
+    "toFEN" - {
+      def splitFEN(gameState: GameState) = gameState.toFEN.split(" ")
+
+      "should return a string that starts with the board's FEN string" in {
+        splitFEN(emptyGameState)(0) shouldEqual emptyGameState.board.toFEN
+      }
+
+      "should return a string with the correct active side" in {
+        splitFEN(emptyGameState)(1) shouldEqual emptyGameState.movesNow.tag
+      }
+
+      "should return a string with the correct available" - {
+        "when at least one castling is available" in {
+          val state = emptyGameState.copy(
+            castlingsForWhite = List(KingSide, QueenSide),
+            castlingsForBlack = List(QueenSide)
+          )
+
+          splitFEN(state)(2) shouldEqual "KQq"
+        }
+
+        "when no castlings available" in {
+          splitFEN(emptyGameState)(2) shouldEqual "-"
+        }
+      }
+
+      "should return a string with correct en passant coordinate" - {
+        "if there is an available en passant coordinate" in {
+          val state = emptyGameState.copy(enPassantCoordinateOption = Some(a1))
+
+          splitFEN(state)(3) shouldEqual "a1"
+        }
+
+        "when no coordinate is available" in {
+          splitFEN(emptyGameState)(3) shouldEqual "-"
+        }
+      }
+
+      "should return a string with correct half move number" in {
+        splitFEN(emptyGameState)(4) shouldEqual
+          s"${emptyGameState.halfMoveNumber}"
+      }
+
+      "should return a string with correct full move number" in {
+        splitFEN(emptyGameState)(5) shouldEqual
+          s"${emptyGameState.fullMoveNumber}"
       }
     }
 

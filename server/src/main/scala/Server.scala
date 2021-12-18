@@ -1,6 +1,7 @@
 package com.chessonline
 
 import chess.domain.{EvaluateMove, KingIsSafe, ValidateMove}
+import multiplayer.RandomService
 import multiplayer.players.{AuthMiddleware, PlayerRoutes, PlayerService}
 import multiplayer.rooms.{RoomRoutes, RoomService}
 
@@ -19,7 +20,8 @@ object Server {
       }
 
       playerService ← PlayerService.of[F]
-      roomService ← RoomService.of[F](evaluateMove)
+      randomService ← RandomService.of[F]
+      roomService ← RoomService.of[F](evaluateMove, randomService)
       authMiddleware = AuthMiddleware(playerService)
 
       httpApp = List(

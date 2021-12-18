@@ -111,3 +111,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Initial multiplayer functionality.
+
+### 18.12.2021
+
+### Added
+- Services for each feature;
+- Packaging by-feature;
+- Completed FEN notation.

@@ -2,6 +2,7 @@ package com.chessonline
 package multiplayer.rooms
 
 import chess.domain.EvaluateMove
+import multiplayer.RandomService
 import multiplayer.domain.UuidString
 import multiplayer.rooms.domain.{Room, RoomId, RoomManager, RoomName}
 
@@ -19,7 +20,10 @@ trait RoomService[F[_]] {
 }
 
 object RoomService {
-  def of[F[_]: Concurrent](evaluateMove: EvaluateMove): F[RoomService[F]] =
+  def of[F[_]: Concurrent](
+      evaluateMove: EvaluateMove,
+      randomService: RandomService[F]
+  ): F[RoomService[F]] =
     for {
       roomManagers <- Ref.of[F, Map[RoomId, RoomManager[F]]](Map.empty)
       availableRoomsTopic <- Topic[F, List[Room]](Nil)
@@ -32,12 +36,16 @@ object RoomService {
           roomId ← UuidString.of[F].map(RoomId.apply)
           room = Room(roomId, roomName, players = Nil)
 
-          roomManager ← RoomManager.of[F](room, evaluateMove)
+          roomManager ← RoomManager.of[F](
+            room,
+            evaluateMove,
+            randomService,
+            onPlayerConnected = makeAvailableRoomsUpdate
+          )
 
           _ ← roomManagers.update { roomManagers ⇒
             roomManagers + (roomId → roomManager)
           }
-          _ ← makeAvailableRoomsUpdate
         } yield roomId
 
       override def getRoomManager(roomId: RoomId): F[Option[RoomManager[F]]] =

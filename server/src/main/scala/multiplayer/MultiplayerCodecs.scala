@@ -6,7 +6,7 @@ import multiplayer.domain._
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.{Codec, Decoder, Encoder}
 
-object Codecs {
+object MultiplayerCodecs {
   implicit val uuidStringCodec: Codec[UuidString] = Codec.from(
     encodeA = Encoder.encodeString.contramap[UuidString](_.value),
     decodeA = Decoder.decodeString.emap(UuidString.fromString)

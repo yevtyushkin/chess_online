@@ -38,23 +38,24 @@ object EvaluateMove {
         // Not performant. TODO: rethink this in future.
         // Worst (at least real) case of such lookup is ~ 16 pieces * 63 destination squares.
         val canPerformAtLeastOneMove = gameState.board.pieceMap
-          .exists { case (from, piece) =>
-            piece.side == side && {
-              val destinationCoordinates = for {
-                file <- CoordinateFile.values
-                rank <- CoordinateRank.values
-                if !(from.file == file && from.rank == rank)
-              } yield Coordinate(file, rank)
+          .exists {
+            case (from, piece) =>
+              piece.side == side && {
+                val destinationCoordinates = for {
+                  file <- CoordinateFile.values
+                  rank <- CoordinateRank.values
+                  if !(from.file == file && from.rank == rank)
+                } yield Coordinate(file, rank)
 
-              destinationCoordinates.exists { destinationCoordinate =>
-                val possibleMove = Move(from, destinationCoordinate)
+                destinationCoordinates.exists { destinationCoordinate =>
+                  val possibleMove = Move(from, destinationCoordinate)
 
-                validateAndEvaluate(
-                  possibleMove,
-                  gameState
-                ).isRight
+                  validateAndEvaluate(
+                    possibleMove,
+                    gameState
+                  ).isRight
+                }
               }
-            }
           }
 
         val newStatus =
@@ -68,21 +69,23 @@ object EvaluateMove {
       private def validateAndEvaluate(
           move: Move,
           gameState: GameState
-      ): ErrorOr[GameState] = for {
-        pieceAndPattern <- validateMove(move, gameState)
-        (piece, pattern) = pieceAndPattern
+      ): ErrorOr[GameState] =
+        for {
+          pieceAndPattern <- validateMove(move, gameState)
+          (piece, pattern) = pieceAndPattern
 
-        stateAfterMove = updateState(move, piece, pattern, gameState)
-        _ <- Either.cond(
-          test = kingIsSafe(
-            forSide = gameState.movesNow,
-            gameState = stateAfterMove
-          ),
-          left = KingNotSafeAfterMove,
-          right = stateAfterMove
-        )
-      } yield stateAfterMove
+          stateAfterMove = updateState(move, piece, pattern, gameState)
+          _ <- Either.cond(
+            test = kingIsSafe(
+              forSide = gameState.movesNow,
+              gameState = stateAfterMove
+            ),
+            left = KingNotSafeAfterMove,
+            right = stateAfterMove
+          )
+        } yield stateAfterMove
 
+      // TODO: track half move number
       private def updateState(
           move: Move,
           piece: Piece,
@@ -107,11 +110,19 @@ object EvaluateMove {
 
             case _ => gameState.castingsAvailable
           }
+        val newFullMoveNumber =
+          if (piece.side == Black) gameState.fullMoveNumber + 1
+          else gameState.fullMoveNumber
+
         val movesNext = gameState.movesNow.opposite
         val updatedState =
           gameState
             .updateCastlings(newCastlings)
-            .copy(movesNow = movesNext, enPassantCoordinateOption = None)
+            .copy(
+              movesNow = movesNext,
+              enPassantCoordinateOption = None,
+              fullMoveNumber = newFullMoveNumber
+            )
 
         val updatedSquares =
           gameState.board.pieceMap - move.from + (move.to -> piece)

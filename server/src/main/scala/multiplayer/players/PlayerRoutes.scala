@@ -1,7 +1,7 @@
 package com.chessonline
 package multiplayer.players
 
-import multiplayer.players.domain.PlayerEvent.PlayerAdded
+import multiplayer.players.PlayerEvent.PlayerAdded
 import multiplayer.players.domain.{Player, PlayerId}
 
 import cats.effect.Sync

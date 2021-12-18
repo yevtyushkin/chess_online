@@ -1,5 +1,7 @@
 package com.chessonline
-package multiplayer.players.domain
+package multiplayer.players
+
+import multiplayer.players.domain.PlayerName
 
 sealed trait PlayerEvent
 

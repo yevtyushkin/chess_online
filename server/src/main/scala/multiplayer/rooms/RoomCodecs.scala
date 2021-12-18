@@ -1,7 +1,7 @@
 package com.chessonline
 package multiplayer.rooms
 
-import multiplayer.Codecs.uuidStringCodec
+import multiplayer.MultiplayerCodecs.uuidStringCodec
 import multiplayer.rooms.GameEvent._
 import multiplayer.rooms.RoomEvent.RoomAdded
 import multiplayer.rooms.domain.RoomState._
@@ -11,7 +11,7 @@ import cats.implicits.toFunctorOps
 import io.circe.generic.semiauto.{deriveCodec, deriveDecoder, deriveEncoder}
 import io.circe.syntax.EncoderOps
 import io.circe.{Codec, Decoder, Encoder}
-import multiplayer.Codecs._
+import multiplayer.MultiplayerCodecs._
 import multiplayer.players.PlayerCodecs._
 import chess.Codecs._
 

@@ -1,8 +1,8 @@
 package com.chessonline
 package multiplayer.players
 
-import multiplayer.Codecs.uuidStringCodec
-import multiplayer.players.domain.PlayerEvent.PlayerAdded
+import multiplayer.MultiplayerCodecs.uuidStringCodec
+import multiplayer.players.PlayerEvent.PlayerAdded
 import multiplayer.players.domain.{Player, PlayerId, PlayerName}
 
 import io.circe.generic.semiauto.{deriveCodec, deriveDecoder}

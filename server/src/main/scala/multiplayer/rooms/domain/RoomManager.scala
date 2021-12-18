@@ -3,6 +3,7 @@ package multiplayer.rooms.domain
 
 import chess.domain.Side.White
 import chess.domain.{EvaluateMove, GameState, Move}
+import multiplayer.RandomService
 import multiplayer.domain.Error
 import multiplayer.domain.Error.syntax.ErrorOps
 import multiplayer.players.domain.Player
@@ -13,7 +14,7 @@ import multiplayer.rooms.domain.RoomState._
 
 import cats.data.EitherT
 import cats.effect.concurrent.Ref
-import cats.effect.{Concurrent, Sync}
+import cats.effect.Concurrent
 import cats.implicits.{catsSyntaxApplicativeId, toFlatMapOps, toFunctorOps}
 import fs2.Pipe
 import fs2.concurrent.SignallingRef
@@ -22,8 +23,6 @@ import io.circe.syntax._
 import org.http4s.Response
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
-
-import scala.util.Random
 
 trait RoomManager[F[_]] {
   def room: F[Room]
@@ -34,7 +33,9 @@ trait RoomManager[F[_]] {
 object RoomManager {
   def of[F[_]: Concurrent](
       room: Room,
-      evaluateMove: EvaluateMove
+      evaluateMove: EvaluateMove,
+      randomService: RandomService[F],
+      onPlayerConnected: F[Unit]
   ): F[RoomManager[F]] =
     for {
       roomRef <- Ref.of[F, Room](room)
@@ -45,7 +46,7 @@ object RoomManager {
       override def room: F[Room] = roomRef.get
 
       override def connect(player: Player): F[Either[String, Response[F]]] = {
-        import multiplayer.Codecs._
+        import multiplayer.MultiplayerCodecs._
 
         val reply: Pipe[F, RoomState, WebSocketFrame] = stream =>
           stream.map(state => WebSocketFrame.Text(state.asJson.toString))
@@ -96,6 +97,7 @@ object RoomManager {
             for {
               _ <- onPlayerConnect(roomWithPlayerAdded)
               _ <- roomRef.set(roomWithPlayerAdded)
+              _ ← onPlayerConnected
 
               response <- WebSocketBuilder[F].build(
                 send = roomStateRef.discrete
@@ -123,11 +125,7 @@ object RoomManager {
               secondPlayer: Player
           ): EitherT[F, Error, Unit] =
             for {
-              firstPlayerPlaysWhiteSide <- EitherT.liftF(
-                Sync[F].delay(
-                  new Random().nextBoolean()
-                )
-              )
+              firstPlayerPlaysWhiteSide <- EitherT.liftF(randomService.nextBool)
 
               shuffle =
                 if (firstPlayerPlaysWhiteSide) (firstPlayer, secondPlayer)
