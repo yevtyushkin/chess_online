@@ -1,5 +1,7 @@
 package com.chessonline
-package multiplayer.domain
+package multiplayer.rooms.domain
+
+import multiplayer.players.domain.Player
 
 import cats.implicits.catsSyntaxEitherId
 

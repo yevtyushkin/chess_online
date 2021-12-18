@@ -1,34 +1,37 @@
 package com.chessonline
-package multiplayer.routes
+package multiplayer.rooms
 
-import chess.domain._
-import multiplayer.Codecs._
-import multiplayer.domain._
-import multiplayer.events.RoomManagementEvent._
+import chess.domain.{EvaluateMove, KingIsSafe, ValidateMove}
+import multiplayer.domain.UuidString
+import multiplayer.players.domain.Player
+import multiplayer.rooms.RoomEvent._
+import multiplayer.rooms.domain.{Room, RoomId, RoomManager}
 
 import cats.data.{EitherT, OptionT}
 import cats.effect.Concurrent
 import cats.effect.concurrent.Ref
-import cats.implicits.{toFlatMapOps, toFunctorOps, toTraverseOps}
+import cats.implicits.{toFunctorOps, toFlatMapOps, toTraverseOps}
 import fs2.Pipe
 import fs2.concurrent.Topic
-import io.circe.syntax._
-import org.http4s._
+import io.circe.syntax.EncoderOps
 import org.http4s.circe.{jsonEncoderOf, jsonOf}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
+import org.http4s.{AuthedRoutes, EntityDecoder, EntityEncoder, Response}
 
 object RoomRoutes {
   def of[F[_]: Concurrent]: F[AuthedRoutes[Player, F]] = {
     val dsl = Http4sDsl[F]
-
+    import RoomCodecs._
     import dsl._
+
     implicit val decodeRoom: EntityDecoder[F, Room] = jsonOf[F, Room]
+
     implicit val encodeRoomId: EntityEncoder[F, RoomId] =
       jsonEncoderOf[F, RoomId]
-    implicit val decodeAddRoom: EntityDecoder[F, AddRoom] =
-      jsonOf[F, AddRoom]
+    implicit val decodeAddRoom: EntityDecoder[F, RoomAdded] =
+      jsonOf[F, RoomAdded]
 
     for {
       roomManagers <- Ref.of[F, Map[RoomId, RoomManager[F]]](Map.empty)
@@ -43,15 +46,17 @@ object RoomRoutes {
             .valueOrF(BadRequest.apply(_))
         } yield connection
 
-      def updateAvailableRooms(): F[Unit] = for {
-        rooms <- roomManagers.get
-          .map(_.values.map(_.room).toList.sequence)
-          .flatten
+      def updateAvailableRooms(): F[Unit] =
+        for {
+          rooms <-
+            roomManagers.get
+              .map(_.values.map(_.room).toList.sequence)
+              .flatten
 
-        availableRooms = rooms.filter(_.players.size < 2)
+          availableRooms = rooms.filter(_.players.size < 2)
 
-        _ <- roomsTopic.publish1(availableRooms)
-      } yield ()
+          _ <- roomsTopic.publish1(availableRooms)
+        } yield ()
 
       AuthedRoutes.of[Player, F] {
         case GET -> Root / "rooms" as _ =>
@@ -70,10 +75,10 @@ object RoomRoutes {
 
         case request @ POST -> Root / "rooms" as _ =>
           for {
-            addRoom <- request.req.as[AddRoom]
+            addRoom <- request.req.as[RoomAdded]
 
             id <- UuidString.of[F]
-            roomId = RoomId(id)
+            roomId = domain.RoomId(id)
             room = Room(roomId, addRoom.name, Nil)
 
             validateMove = ValidateMove()

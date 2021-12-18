@@ -1,7 +1,8 @@
 package com.chessonline
-package multiplayer.domain
+package multiplayer.rooms.domain
 
 import chess.domain.GameState
+import multiplayer.players.domain.Player
 
 sealed trait RoomState
 

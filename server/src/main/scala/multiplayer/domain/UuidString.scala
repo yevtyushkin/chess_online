@@ -12,7 +12,8 @@ object UuidString {
   def of[F[_]: Sync]: F[UuidString] =
     Sync[F].delay(UuidString(UUID.randomUUID().toString))
 
-  def fromString(s: String): Either[String, UuidString] = Try(
-    UuidString(UUID.fromString(s).toString)
-  ).toEither.left.map(_ => "Invalid UUID")
+  def fromString(s: String): Either[String, UuidString] =
+    Try(
+      UuidString(UUID.fromString(s).toString)
+    ).toEither.left.map(_ => "Invalid UUID")
 }

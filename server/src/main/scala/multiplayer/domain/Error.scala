@@ -3,7 +3,7 @@ package multiplayer.domain
 
 import cats.Show
 
-final case class Error(message: String)
+final case class Error(message: String) extends AnyVal
 
 object Error {
   object syntax {
