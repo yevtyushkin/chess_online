@@ -1,13 +1,10 @@
 package com.chessonline
 
-import multiplayer.domain._
+import multiplayer.players.{AuthMiddleware, PlayerRoutes, PlayerService}
+import multiplayer.rooms.RoomRoutes
 
-import cats.effect.concurrent.Ref
 import cats.effect.{ConcurrentEffect, ExitCode, Timer}
 import cats.implicits.{toFlatMapOps, toFunctorOps, toSemigroupKOps}
-import com.chessonline.multiplayer.players.{AuthMiddleware, PlayerRoutes}
-import com.chessonline.multiplayer.players.domain.{Player, PlayerId}
-import com.chessonline.multiplayer.rooms.RoomRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 
 import scala.concurrent.ExecutionContext
@@ -15,13 +12,14 @@ import scala.concurrent.ExecutionContext
 object Server {
   def start[F[_]: ConcurrentEffect: Timer]: F[ExitCode] =
     for {
-      players <- Ref.of[F, Map[PlayerId, Player]](Map.empty)
+      playerService ← PlayerService.of[F]
 
-      authMiddleware = AuthMiddleware.of[F](players)
+      authMiddleware = AuthMiddleware(playerService)
+      playerRoutes = PlayerRoutes(playerService, authMiddleware)
       roomRoutes <- RoomRoutes.of[F]
 
       httpApp = (ServerRoutes.of[F] <+>
-          PlayerRoutes.of[F](players) <+>
+          playerRoutes <+>
           authMiddleware(roomRoutes)).orNotFound
 
       ec <-

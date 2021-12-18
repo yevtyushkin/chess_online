@@ -6,13 +6,11 @@ import multiplayer.players.domain.{Player, PlayerId}
 
 import cats.Monad
 import cats.data.{Kleisli, OptionT}
-import cats.effect.concurrent.Ref
-import cats.implicits.toFunctorOps
 import org.http4s.Request
 
 object AuthMiddleware {
-  def of[F[_]: Monad](
-      players: Ref[F, Map[PlayerId, Player]]
+  def apply[F[_]: Monad](
+      playerService: PlayerService[F]
   ): org.http4s.server.AuthMiddleware[F, Player] = {
     def authPlayer: Kleisli[OptionT[F, *], Request[F], Player] =
       Kleisli { request =>
@@ -27,7 +25,7 @@ object AuthMiddleware {
                   .toOption
             } yield playerId
           }
-          player <- OptionT(players.get.map(players => players.get(playerId)))
+          player <- OptionT(playerService.getPlayerById(playerId))
         } yield player
       }
 
