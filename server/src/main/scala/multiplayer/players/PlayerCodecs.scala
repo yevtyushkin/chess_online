@@ -11,7 +11,7 @@ import io.circe.{Codec, Decoder, Encoder}
 object PlayerCodecs {
   implicit val playerIdCodec: Codec[PlayerId] = Codec.from(
     encodeA = uuidStringCodec.contramap[PlayerId](_.value),
-    decodeA = uuidStringCodec.map(PlayerId)
+    decodeA = uuidStringCodec.map(PlayerId.apply)
   )
 
   implicit val playerNameCodec: Codec[PlayerName] = Codec.from(

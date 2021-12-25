@@ -17,11 +17,11 @@ object AuthMiddleware {
         for {
           playerId <- OptionT.fromOption {
             for {
-              idCookie <- request.cookies.find(_.name == "id")
+              idHeader <- request.headers.headers.find(_.name.toString == "id")
               playerId <-
                 UuidString
-                  .fromString(idCookie.content)
-                  .map(PlayerId)
+                  .fromString(idHeader.value)
+                  .map(PlayerId.apply)
                   .toOption
             } yield playerId
           }

@@ -24,18 +24,21 @@ object Codecs {
 
   implicit val gameStatusEncoder: Encoder[GameStatus] = Encoder.instance {
     status =>
-      implicit val winEncoder: Encoder.AsObject[GameStatus.Win] =
+      implicit val winEncoder: Encoder[GameStatus.Win] =
         Encoder.forProduct2("tag", "by")(status => (status.tag, status.by))
 
       status match {
-        case status @ (GameStatus.GameContinues | GameStatus.Draw) =>
-          status.tag.asJson
         case status: GameStatus.Win => status.asJson
+
+        case status @ (GameStatus.GameContinues | GameStatus.Draw) =>
+          Json.fromFields(Iterable("tag" → status.tag.asJson))
       }
   }
 
   implicit val gameStateEncoder: Encoder[GameState] =
-    Encoder.encodeString.contramap(_.toFEN)
+    Encoder.forProduct3("status", "movesNow", "fen")(state ⇒
+      (state.status, state.movesNow, state.toFEN)
+    )
 
   implicit val moveDecoder: Decoder[Move] = deriveDecoder
 }

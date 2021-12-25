@@ -10,7 +10,7 @@ import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.jsonOf
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.AuthMiddleware
-import org.http4s.{AuthedRoutes, EntityDecoder, HttpRoutes, ResponseCookie}
+import org.http4s.{AuthedRoutes, EntityDecoder, HttpRoutes}
 
 object PlayerRoutes {
   def apply[F[_]: Sync](
@@ -35,11 +35,7 @@ object PlayerRoutes {
 
           playerId ← playerService.addPlayer(playerName)
 
-          response <- Created().map(
-            _.addCookie(
-              ResponseCookie(name = "id", content = playerId.value.value)
-            )
-          )
+          response <- Created(playerId.value.value)
         } yield response
     } <+> authMiddleware(
       AuthedRoutes.of[Player, F] {

@@ -26,7 +26,7 @@ object PlayerService {
 
       override def addPlayer(playerName: PlayerName): F[PlayerId] =
         for {
-          playerId ← UuidString.of[F].map(PlayerId)
+          playerId ← UuidString.of[F].map(PlayerId.apply)
           player = Player(playerId, playerName)
 
           _ ← allPlayers.update(allPlayers ⇒ allPlayers + (playerId → player))

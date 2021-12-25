@@ -32,7 +32,7 @@ final case class GameState(
         val whiteCastlings = makeCastlingsString(castlingsForWhite).toUpperCase
         val blackCastlings = makeCastlingsString(castlingsForBlack)
 
-        s"$whiteCastlings$blackCastlings"
+        s"${whiteCastlings.sorted}${blackCastlings.sorted}"
       }
     }
 

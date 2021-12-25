@@ -46,6 +46,7 @@ object RoomService {
           _ ← roomManagers.update { roomManagers ⇒
             roomManagers + (roomId → roomManager)
           }
+          _ ← makeAvailableRoomsUpdate
         } yield roomId
 
       override def getRoomManager(roomId: RoomId): F[Option[RoomManager[F]]] =

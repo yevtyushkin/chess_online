@@ -8,6 +8,7 @@ import multiplayer.rooms.{RoomRoutes, RoomService}
 import cats.effect.{ConcurrentEffect, ExitCode, Timer}
 import cats.implicits.{toFlatMapOps, toFunctorOps, toSemigroupKOps}
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.middleware.CORS
 
 import scala.concurrent.ExecutionContext
 
@@ -24,11 +25,16 @@ object Server {
       roomService ← RoomService.of[F](evaluateMove, randomService)
       authMiddleware = AuthMiddleware(playerService)
 
-      httpApp = List(
-        ServerHealthRoutes[F],
-        PlayerRoutes(playerService, authMiddleware),
-        authMiddleware(RoomRoutes(roomService))
-      ).reduce(_ <+> _).orNotFound
+      corsPolicy =
+        CORS.policy.withAllowMethodsAll.withAllowHeadersReflect.withExposeHeadersAll
+
+      httpApp = corsPolicy.apply(
+        List(
+          ServerHealthRoutes[F],
+          PlayerRoutes(playerService, authMiddleware),
+          RoomRoutes(roomService, playerService, authMiddleware)
+        ).reduce(_ <+> _).orNotFound
+      )
 
       ec <-
         BlazeServerBuilder[F](ExecutionContext.global)
