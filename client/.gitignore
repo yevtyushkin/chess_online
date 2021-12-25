@@ -1,3 +1,8 @@
+# code generation
+**.freezed.dart
+**.g.dart
+**.gr.dart
+
 # Miscellaneous
 *.class
 *.log
