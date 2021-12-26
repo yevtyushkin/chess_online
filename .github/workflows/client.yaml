@@ -26,6 +26,9 @@ jobs:
         run: flutter build web --release --web-renderer auto --dart-define=httpScheme=https --dart-define=wsScheme=wss --dart-define=host=scala-chess-online.herokuapp.com --dart-define=port=
         working-directory: client/
 
+      - name: Install Firebase CLI
+        run: curl -sL https://firebase.tools | bash
+
       - name: Deploy
         working-directory: client/
         run: |
