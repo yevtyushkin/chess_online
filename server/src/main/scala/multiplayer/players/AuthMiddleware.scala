@@ -14,13 +14,16 @@ object AuthMiddleware {
   ): org.http4s.server.AuthMiddleware[F, Player] = {
     def authPlayer: Kleisli[OptionT[F, *], Request[F], Player] =
       Kleisli { request =>
+        println(request.headers.headers)
+
         for {
           playerId <- OptionT.fromOption {
             for {
-              idHeader <- request.headers.headers.find(_.name.toString == "id")
+              authHeader <-
+                request.headers.headers.find(_.name.toString == "Authorization")
               playerId <-
                 UuidString
-                  .fromString(idHeader.value)
+                  .fromString(authHeader.value)
                   .map(PlayerId.apply)
                   .toOption
             } yield playerId
