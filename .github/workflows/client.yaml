@@ -21,10 +21,6 @@ jobs:
         run: flutter pub get
         working-directory: client/
 
-      - name: Tests
-        run: flutter test
-        working-directory: client/
-
       - name: Build
         run: flutter build web --release --web-renderer auto --dart-define=httpScheme=https --dart-define=wsScheme=wss --dart-define=host=scala-chess-online.herokuapp.com --dart-define=port=
         working-directory: client/
