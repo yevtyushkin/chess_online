@@ -5,6 +5,7 @@ on:
       - master
     paths:
       - client/**
+      - .github/workflows/client.yaml
 
 jobs:
   client_build:
