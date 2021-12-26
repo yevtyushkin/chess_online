@@ -38,7 +38,7 @@ object Server {
 
       ec <-
         BlazeServerBuilder[F](ExecutionContext.global)
-          .bindHttp(8080, "localhost")
+          .bindHttp()
           .withHttpApp(httpApp)
           .serve
           .compile

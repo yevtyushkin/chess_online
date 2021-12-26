@@ -14,6 +14,8 @@ val http4sVersion = "0.22.7"
 val refinedVersion = "0.9.28"
 val scalatestVersion = "3.2.10"
 
+enablePlugins(JavaAppPackaging)
+
 scalacOptions ++= Seq(
   "-Ymacro-annotations"
 )
