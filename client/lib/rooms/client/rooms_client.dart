@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:client/rooms/models/room.dart';
 import 'package:client/utils/server_uri.dart';
@@ -17,7 +18,7 @@ class RoomsClient {
     return _client.postUri(
       uri,
       data: jsonEncode({'name': roomName}),
-      options: Options(headers: {'id': playerId}),
+      options: Options(headers: {HttpHeaders.authorizationHeader: playerId}),
     );
   }
 

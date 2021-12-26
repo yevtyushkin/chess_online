@@ -15,15 +15,10 @@ jobs:
 
       - uses: subosito/flutter-action@v1
         with:
-          flutter-version: '2.5.3'
-          channel: master
+          flutter-version: '2.8.0'
 
       - name: Dependencies
         run: flutter pub get
-        working-directory: client/
-
-      - name: Analyze Code
-        run: flutter analyze
         working-directory: client/
 
       - name: Tests
@@ -31,9 +26,13 @@ jobs:
         working-directory: client/
 
       - name: Build
-        run: flutter build web --release --web-renderer auto
+        run: flutter build web --release --web-renderer auto --dart-define=httpScheme=https --dart-define=wsScheme=wss --dart-define=host=scala-chess-online.herokuapp.com --dart-define=port=
         working-directory: client/
 
       - name: Deploy
-        run: echo 'TODO'
         working-directory: client/
+        run: |
+          firebase use --add scala-chess-online
+          firebase deploy
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

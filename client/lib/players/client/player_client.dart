@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:client/players/models/player.dart';
 import 'package:client/utils/server_uri.dart';
@@ -24,7 +25,7 @@ class PlayerClient {
   Future<Player> fetchPlayer(String id) async {
     final response = await _client.getUri(
       _playersUri,
-      options: Options(headers: {'id': id}),
+      options: Options(headers: {HttpHeaders.authorizationHeader: id}),
     );
 
     final playerJson = response.data as Map<String, dynamic>;
