@@ -18,8 +18,8 @@ jobs:
         with:
           flutter-version: '2.8.0'
 
-      - name: Dependencies
-        run: flutter pub get
+      - name: Dependencies and codegeneration
+        run: flutter pub get && flutter pub run build_runner build
         working-directory: client/
 
       - name: Build
