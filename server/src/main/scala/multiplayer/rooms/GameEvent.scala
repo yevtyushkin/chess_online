@@ -8,5 +8,4 @@ sealed trait GameEvent
 object GameEvent {
   case object PlayerReady extends GameEvent
   final case class MoveMade(move: Move) extends GameEvent
-  final case class PassPawnSelected(pieceType: PieceType) extends GameEvent
 }

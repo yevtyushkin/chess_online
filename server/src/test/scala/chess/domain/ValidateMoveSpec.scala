@@ -99,15 +99,16 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
             twoSquaresForwardMoves
               .zip(expectedEnPassantCoordinates)
               .zip(List(whitePawn, blackPawn))
-              .foreach { case ((move, expectedEnPassantCoordinate), pawn) =>
-                validateMove(
-                  move,
-                  createStateForPatternValidation(pawn, move)
-                ).value shouldEqual
-                  (pawn,
-                  Transition(enPassantCoordinateOption =
-                    Some(expectedEnPassantCoordinate)
-                  ))
+              .foreach {
+                case ((move, expectedEnPassantCoordinate), pawn) =>
+                  validateMove(
+                    move,
+                    createStateForPatternValidation(pawn, move)
+                  ).value shouldEqual
+                    (pawn,
+                    Transition(enPassantCoordinateOption =
+                      Some(expectedEnPassantCoordinate)
+                    ))
               }
           }
 
@@ -132,7 +133,7 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
               .zip(List(whitePawn, whitePawn, blackPawn, blackPawn))
               .foreach {
                 case (
-                      (move @ Move(_, to), expectedAttackedPieceCoordinate),
+                      (move @ Move(_, to, _), expectedAttackedPieceCoordinate),
                       pawn
                     ) =>
                   validateMove(
@@ -625,26 +626,28 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
           additionalPieces: Map[Coordinate, Piece] = Map.empty,
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           expected: MovePattern
-      ): Unit = testByPredicate(
-        pieces,
-        moves,
-        (piece, _) => (piece, expected).asRight,
-        castlingsAvailable,
-        additionalPieces
-      )
+      ): Unit =
+        testByPredicate(
+          pieces,
+          moves,
+          (piece, _) => (piece, expected).asRight,
+          castlingsAvailable,
+          additionalPieces
+        )
 
       def testInvalidPattern(
           pieces: Seq[Piece],
           moves: Seq[Move],
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           additionalPieces: Map[Coordinate, Piece] = Map.empty
-      ): Unit = testByPredicate(
-        pieces,
-        moves,
-        (_, _) => InvalidMovePattern.asLeft,
-        castlingsAvailable,
-        additionalPieces
-      )
+      ): Unit =
+        testByPredicate(
+          pieces,
+          moves,
+          (_, _) => InvalidMovePattern.asLeft,
+          castlingsAvailable,
+          additionalPieces
+        )
 
       def testByPredicate(
           pieces: Seq[Piece],
@@ -652,16 +655,18 @@ class ValidateMoveSpec extends AnyFreeSpec with EitherValues {
           predicate: (Piece, Move) => ErrorOr[(Piece, MovePattern)],
           castlingsAvailable: List[CastlingType] = CastlingType.values.toList,
           additionalPieces: Map[Coordinate, Piece] = Map.empty
-      ): Unit = moves.zip(pieces).foreach { case (move, piece) =>
-        validateMove(
-          move,
-          createStateForPatternValidation(
-            piece,
-            move,
-            additionalPieces = additionalPieces
-          ).updateCastlings(castlingsAvailable)
-        ) shouldEqual predicate(piece, move)
-      }
+      ): Unit =
+        moves.zip(pieces).foreach {
+          case (move, piece) =>
+            validateMove(
+              move,
+              createStateForPatternValidation(
+                piece,
+                move,
+                additionalPieces = additionalPieces
+              ).updateCastlings(castlingsAvailable)
+            ) shouldEqual predicate(piece, move)
+        }
 
       def createStateForPatternValidation(
           piece: Piece,

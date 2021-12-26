@@ -3,7 +3,8 @@ package chess.domain
 
 final case class Move(
     from: Coordinate,
-    to: Coordinate
+    to: Coordinate,
+    promoteTo: Option[PieceType] = None
 ) {
   def as2DVector: (Int, Int) =
     (

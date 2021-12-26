@@ -18,6 +18,9 @@ class GameEvent with _$GameEvent {
         'move': {
           'from': move.from,
           'to': move.to,
+          'promoteTo': move.promotion
+              .map((pieceType) => pieceType.toUpperCase())
+              .toNullable(),
         },
       },
     );

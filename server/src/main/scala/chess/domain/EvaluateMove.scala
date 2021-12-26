@@ -124,8 +124,22 @@ object EvaluateMove {
               fullMoveNumber = newFullMoveNumber
             )
 
+        val pieceAtDestination = move.promoteTo match {
+          case Some(pieceType) ⇒
+            val movesNow = gameState.movesNow
+            val promotionRank = if (movesNow == White) `8` else `1`
+            val isLegalPromotion =
+              (piece.pieceType, move.to.rank) == (Pawn, promotionRank)
+
+            if (isLegalPromotion) Piece(side = movesNow, pieceType = pieceType)
+            else piece
+
+          case None ⇒ piece
+        }
+
         val updatedSquares =
-          gameState.board.pieceMap - move.from + (move.to -> piece)
+          gameState.board.pieceMap - move.from + (move.to -> pieceAtDestination)
+
         movePattern match {
           case Transition(enPassantCoordinateOption) =>
             updatedState.copy(

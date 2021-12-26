@@ -47,7 +47,6 @@ object RoomCodecs {
 
   implicit val gameEventDecoder: Decoder[GameEvent] = {
     val moveMadeDecoder: Decoder[MoveMade] = deriveDecoder
-    val passPawnSelectionDecoder: Decoder[PassPawnSelected] = deriveDecoder
     val playerReadyDecoder: Decoder[PlayerReady.type] =
       Decoder.decodeString.emap(str =>
         Either.cond(str == "ready", PlayerReady, "Invalid event")
@@ -55,8 +54,7 @@ object RoomCodecs {
 
     List[Decoder[GameEvent]](
       playerReadyDecoder.widen,
-      moveMadeDecoder.widen,
-      passPawnSelectionDecoder.widen
+      moveMadeDecoder.widen
     ).reduceLeft(_ or _)
   }
 }

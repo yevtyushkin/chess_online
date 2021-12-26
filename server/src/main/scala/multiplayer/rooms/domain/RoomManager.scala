@@ -181,10 +181,7 @@ object RoomManager {
               onPlayerReady(state)
 
             case (state: GameStarted, MoveMade(move)) => onMoveMade(state, move)
-            case (_: GameStarted, PassPawnSelected(_)) =>
-              EitherT.left("Needs domain improvements".toError.pure) // TODO
-            case _ =>
-              EitherT.left("Unknown state<->event combination".toError.pure)
+            case _                                    => EitherT.left("Can't handle the given event".toError.pure)
           }
         } yield result
       }

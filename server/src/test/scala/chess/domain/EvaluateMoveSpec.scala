@@ -9,6 +9,7 @@ import chess.domain.Side._
 import chess.domain.ValidateMove.ErrorOr
 
 import cats.implicits.catsSyntaxEitherId
+import com.chessonline.chess.domain.PieceType.{Bishop, Queen}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.EitherValues
 import org.scalatest.OptionValues.convertOptionToValuable
@@ -113,16 +114,30 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
           ).value.castlingsForWhite shouldEqual allCastlingsAvailableState.castlingsForWhite
         }
 
-        "updates chessboard correctly" in {
-          val pawnAtA1 = emptyGameState.copy(
-            board = Chessboard(Map(a2 -> whitePawn))
-          )
+        "updates chessboard correctly" - {
+          "for regular moves" in {
+            val pawnAtA1 = emptyGameState.copy(
+              board = Chessboard(Map(a2 -> whitePawn))
+            )
 
-          setUpAndEvalMove(
-            whitePawn,
-            move = Move(a2, a4),
-            state = pawnAtA1
-          ).value.board shouldEqual Chessboard(Map(a4 -> whitePawn))
+            setUpAndEvalMove(
+              whitePawn,
+              move = Move(a2, a4),
+              state = pawnAtA1
+            ).value.board shouldEqual Chessboard(Map(a4 -> whitePawn))
+          }
+
+          "for promotions" in {
+            val promotionState = emptyGameState.copy(
+              board = Chessboard(Map(a7 -> whitePawn))
+            )
+
+            setUpAndEvalMove(
+              whitePawn,
+              Move(a7, a8, Some(Queen)),
+              state = promotionState
+            ).value.board.pieceMap(a8) shouldEqual Piece(White, Queen)
+          }
         }
 
         "updates en passant coordinate correctly" - {
@@ -225,17 +240,32 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
           }
         }
 
-        "updates chessboard correctly" in {
-          val pawnAtE4State = emptyGameState.copy(
-            board = Chessboard(Map(e4 -> blackPawn))
-          )
+        "updates chessboard correctly" - {
+          "for regular attacks" in {
+            val pawnAtE4State = emptyGameState.copy(
+              board = Chessboard(Map(e4 -> blackPawn))
+            )
 
-          setUpAndEvalMove(
-            whiteRook,
-            move = Move(a1, e4),
-            patternResult = attack,
-            state = pawnAtE4State
-          ).value.board shouldEqual Chessboard(Map(e4 -> whiteRook))
+            setUpAndEvalMove(
+              whiteRook,
+              move = Move(a1, e4),
+              patternResult = attack,
+              state = pawnAtE4State
+            ).value.board shouldEqual Chessboard(Map(e4 -> whiteRook))
+          }
+
+          "for promotions" in {
+            val promotionAttack = emptyGameState.copy(
+              board = Chessboard(Map(a7 -> whitePawn, b8 → blackQueen))
+            )
+
+            setUpAndEvalMove(
+              whitePawn,
+              move = Move(a7, b8, Some(Bishop)),
+              patternResult = attack,
+              state = promotionAttack
+            ).value.board.pieceMap(b8) shouldEqual Piece(White, Bishop)
+          }
         }
 
         "clears en passant coordinate correctly" in {
@@ -425,16 +455,17 @@ class EvaluateMoveSpec extends AnyFreeSpec with MockFactory with EitherValues {
         moveToIsKingSave: Move => Boolean = _ => true,
         state: GameState = emptyGameState
     )(predicate: ErrorOr[GameState] => Boolean): Unit =
-      moves.zip(pieces).foreach { case (move, piece) =>
-        predicate(
-          setUpAndEvalMove(
-            piece,
-            move,
-            moveToPattern(move),
-            moveToIsKingSave(move),
-            state
-          )
-        ) shouldBe true
+      moves.zip(pieces).foreach {
+        case (move, piece) =>
+          predicate(
+            setUpAndEvalMove(
+              piece,
+              move,
+              moveToPattern(move),
+              moveToIsKingSave(move),
+              state
+            )
+          ) shouldBe true
       }
 
     def setUpAndEvalMove(
