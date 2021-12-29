@@ -1,0 +1,75 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+package chess.domain {
+
+    abstract class Side {
+        + Side White
+        + Side Black
+    }
+
+    abstract class GameStatus {
+        + GameStatus Win
+        + GameStatus Draw
+        + GameStatus GameContinues
+    }
+
+    abstract class CastlingType {
+        + CastlingType KingSide
+        + CastlingType QueenSide
+    }
+
+    class Coordinate {
+        + Rank rank
+        + File file
+    }
+
+    abstract class Piece {
+        + Side side
+        + PieceType piece
+    }
+
+    abstract class PieceType {
+        + PieceType Pawn
+        + PieceType Rook
+        + PieceType Bishop
+        + PieceType Knight
+        + PieceType King
+        + PieceType Queen
+    }
+
+    class Chessboard {
+        + Map<Coordinate, Piece> pieceMap
+    }
+
+    class Move {
+        + Coordinate from
+        + Coordinate to
+        + Option<PieceType> promoteTo
+    }
+
+    class GameState {
+        + GameStatus status
+        + Side movesNow
+        + Chessboard board
+        + List<CastlingType> castlingsForWhite
+        + List<CastlingType> castlingsForBlack
+        + Option<Coordinate> enPassantCoordinateOption
+    }
+}
+
+GameState -->  Side : uses
+GameState --> GameStatus : uses
+GameState --> CastlingType : uses
+GameState --> Coordinate : uses
+GameState --> Chessboard : uses
+
+Piece --> PieceType : uses
+
+Chessboard --> Coordinate : uses
+Chessboard --> Piece : uses
+
+Move --> Coordinate : uses
+Move --> PieceType : uses
+
+@enduml

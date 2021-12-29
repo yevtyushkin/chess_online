@@ -1,0 +1,38 @@
+@startuml
+
+actor World
+
+participant EvaluateMove
+
+World -> EvaluateMove : apply(gameState, move)
+
+participant MoveValidator
+EvaluateMove -> MoveValidator : apply(gameState, move)
+
+MoveValidator --> EvaluateMove : Either[Error, MovePattern]
+
+alt Move is Valid
+EvaluateMove --> EvaluateMove : creates updated GameState
+EvaluateMove -> KingIsSafe : apply(gameState, move)
+KingIsSafe --> EvaluateMove : Boolean
+
+    alt King is safe after move
+
+    EvaluateMove --> World : updated GameState
+
+    else King is not safe after move
+
+    EvaluateMove --> World : Error
+
+    end
+
+participant KingIsSafe
+
+else Move is Invalid
+
+EvaluateMove --> World : Error
+
+end
+
+
+@enduml

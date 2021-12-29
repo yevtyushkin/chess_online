@@ -1,0 +1,88 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class Main {
+    + IO<ExitCode> run(Array<String> args)
+}
+
+class Server<F<_>> {
+    + F<ExitCode> start()
+}
+
+package multiplayer.rooms {
+    package domain {
+        class RoomName {
+            + String value
+        }
+
+        class RoomID {
+            + UuidString value
+        }
+
+        class Room {
+            + RoomName name
+            + RoomId id
+        }
+
+        class RoomManager<F<_>> {
+            + F<Either<String, Response<F>> connect()
+            + F<Room> room()
+        }
+
+        abstract class RoomState {
+            + RoomState AwaitingFullfillment
+            + RoomState AwaitingPlayersReady
+            + RoomState GameStarted
+        }
+    }
+
+    abstract class RoomEvent {
+        + RoomEvent RoomAdded
+    }
+
+    abstract class GameEvent {
+        + GameEvent PlayerReady
+        + GameEvent MoveMade
+    }
+
+    class RoomRoutes<F<_>> {
+        + RoomService<F> RoomService
+
+        + HttpRoutes routes(): HttpRoutes<F>
+    }
+
+    class RoomCodecs {
+        + Codec<RoomName> roomNameCodec
+        + Codec<RoomId> roomIdCodec
+    }
+
+    class RoomService<F<_>> {
+          + Stream<F, List<Room>> availableRooms()
+
+          + F<RoomId> addRoom(roomName: RoomName)
+
+          + F<RoomManager<F>> getRoomManager(RoomId: RoomId)
+    }
+}
+
+Main -right-> Server : starts
+
+Server -right-> RoomRoutes : uses
+
+RoomRoutes --> RoomService : uses
+RoomRoutes --> RoomCodecs : uses
+RoomRoutes --> RoomEvent : uses
+
+RoomService --> RoomName : uses
+RoomService --> RoomID : uses
+RoomService --> Room : uses
+RoomService --> RoomManager : uses
+
+RoomManager --> Room : uses
+RoomManager --> RoomState : uses
+RoomManager --> GameEvent : uses
+
+Room --> RoomID : uses
+Room -right-> RoomName : uses
+
+@enduml
